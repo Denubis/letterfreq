@@ -5,32 +5,43 @@ Positional letter frequency analysis for five-letter English words, published as
 ## Stack
 
 - **Python 3.14** with **uv** for package management
+- **Polars** for frequency computation
 - **Zensical** (v0.0.28) for static site generation — successor to mkdocs-material by squidfunk
 - **GitHub Pages** for hosting via `.github/workflows/docs.yml`
 
 ## Project structure
 
 ```
-docs/           — Markdown source for the site (Zensical reads this)
-main.py         — Python script to generate frequency data
-zensical.toml   — Zensical configuration (TOML, not mkdocs.yml)
-site/           — Build output (gitignored)
+docs/               — Generated page content (Zensical reads this)
+docs/data/          — Runtime JSON (trigrams only; other data baked into HTML)
+docs/js/            — Small trigram-expand script (only JS on page)
+docs/css/           — Heatmap and frequency table styles
+docs/design-plans/  — Design documents
+main.py             — Python script: computes frequencies, generates docs/index.md
+zensical.toml       — Zensical configuration (TOML, not mkdocs.yml)
+site/               — Build output (gitignored)
 ```
 
 ## Commands
 
 ```bash
-uv run zensical serve     # Local preview at http://localhost:8000
-uv run zensical build     # Build static site to site/
-uv run python main.py     # Generate frequency data
+uv run python main.py         # Generate frequency data + page content
+uv run zensical serve          # Local preview at http://localhost:8000
+uv run zensical build --clean  # Build static site to site/
 ```
 
-## Content concept
+## Architecture
 
-Inspired by Norvig's Mayzner revisited (https://norvig.com/mayzner.html).
-Analysis of 5-letter words with:
-- Unigram frequencies by position (1-5)
-- Bigram frequencies by position, forward and backward looking (grid format)
-- Trigram frequencies by position, high-frequency entries
+Static-first design. Python generates most of the page as HTML embedded in Markdown:
+- **Overall frequency:** Static sorted table
+- **Unigrams:** Static 26×5 heatmap (coloured cells)
+- **Bigrams:** 4 collapsible 26×26 grids with `<details>` drill-downs for ±1 neighbour frequencies
+- **Trigrams:** 9 static 26×26 grids (3 gap positions × 3 word windows), JS click-to-expand for completion lists
 
-Freshness: 2026-03-22
+Only JS on the page is `trigram-expand.js` loading `docs/data/trigrams.json`.
+
+## Design plan
+
+Full design at `docs/design-plans/2026-03-22-five-letter-freq-site.md`
+
+Freshness: 2026-03-23
