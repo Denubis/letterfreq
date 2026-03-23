@@ -1,173 +1,41 @@
 ---
-icon: lucide/rocket
+icon: null
 ---
 
-# Get started
+# Five-Letter Word Frequencies
 
-For full documentation visit [zensical.org](https://zensical.org/docs/).
+Analysis of **4,667** five-letter words from `/usr/share/dict/words`.
 
-## Commands
+## Overall Letter Frequencies
 
-* [`zensical new`][new] - Create a new project
-* [`zensical serve`][serve] - Start local web server
-* [`zensical build`][build] - Build your site
-
-  [new]: https://zensical.org/docs/usage/new/
-  [serve]: https://zensical.org/docs/usage/preview/
-  [build]: https://zensical.org/docs/usage/build/
-
-## Examples
-
-### Admonitions
-
-> Go to [documentation](https://zensical.org/docs/authoring/admonitions/)
-
-!!! note
-
-    This is a **note** admonition. Use it to provide helpful information.
-
-!!! warning
-
-    This is a **warning** admonition. Be careful!
-
-### Details
-
-> Go to [documentation](https://zensical.org/docs/authoring/admonitions/#collapsible-blocks)
-
-??? info "Click to expand for more info"
-
-    This content is hidden until you click to expand it.
-    Great for FAQs or long explanations.
-
-## Code Blocks
-
-> Go to [documentation](https://zensical.org/docs/authoring/code-blocks/)
-
-``` python hl_lines="2" title="Code blocks"
-def greet(name):
-    print(f"Hello, {name}!") # (1)!
-
-greet("Python")
-```
-
-1.  > Go to [documentation](https://zensical.org/docs/authoring/code-blocks/#code-annotations)
-
-    Code annotations allow to attach notes to lines of code.
-
-Code can also be highlighted inline: `#!python print("Hello, Python!")`.
-
-## Content tabs
-
-> Go to [documentation](https://zensical.org/docs/authoring/content-tabs/)
-
-=== "Python"
-
-    ``` python
-    print("Hello from Python!")
-    ```
-
-=== "Rust"
-
-    ``` rs
-    println!("Hello from Rust!");
-    ```
-
-## Diagrams
-
-> Go to [documentation](https://zensical.org/docs/authoring/diagrams/)
-
-``` mermaid
-graph LR
-  A[Start] --> B{Error?};
-  B -->|Yes| C[Hmm...];
-  C --> D[Debug];
-  D --> B;
-  B ---->|No| E[Yay!];
-```
-
-## Footnotes
-
-> Go to [documentation](https://zensical.org/docs/authoring/footnotes/)
-
-Here's a sentence with a footnote.[^1]
-
-Hover it, to see a tooltip.
-
-[^1]: This is the footnote.
-
-
-## Formatting
-
-> Go to [documentation](https://zensical.org/docs/authoring/formatting/)
-
-- ==This was marked (highlight)==
-- ^^This was inserted (underline)^^
-- ~~This was deleted (strikethrough)~~
-- H~2~O
-- A^T^A
-- ++ctrl+alt+del++
-
-## Icons, Emojis
-
-> Go to [documentation](https://zensical.org/docs/authoring/icons-emojis/)
-
-* :sparkles: `:sparkles:`
-* :rocket: `:rocket:`
-* :tada: `:tada:`
-* :memo: `:memo:`
-* :eyes: `:eyes:`
-
-## Maths
-
-> Go to [documentation](https://zensical.org/docs/authoring/math/)
-
-$$
-\cos x=\sum_{k=0}^{\infty}\frac{(-1)^k}{(2k)!}x^{2k}
-$$
-
-!!! warning "Needs configuration"
-    Note that MathJax is included via a `script` tag on this page and is not
-    configured in the generated default configuration to avoid including it
-    in a pages that do not need it. See the documentation for details on how
-    to configure it on all your pages if they are more Maths-heavy than these
-    simple starter pages.
-
-<script id="MathJax-script" src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
-<script>
-  window.MathJax = {
-    tex: {
-      inlineMath: [["\\(", "\\)"]],
-      displayMath: [["\\[", "\\]"]],
-      processEscapes: true,
-      processEnvironments: true
-    },
-    options: {
-      ignoreHtmlClass: ".*|",
-      processHtmlClass: "arithmatex"
-    }
-  };
-
-  document$.subscribe(() => {
-    MathJax.startup.output.clearCache()
-    MathJax.typesetClear()
-    MathJax.texReset()
-    MathJax.typesetPromise()
-  })
-</script>
-
-## Task Lists
-
-> Go to [documentation](https://zensical.org/docs/authoring/lists/#using-task-lists)
-
-* [x] Install Zensical
-* [x] Configure `zensical.toml`
-* [x] Write amazing documentation
-* [ ] Deploy anywhere
-
-## Tooltips
-
-> Go to [documentation](https://zensical.org/docs/authoring/tooltips/)
-
-[Hover me][example]
-
-  [example]: https://example.com "I'm a tooltip!"
+<table class="freq-table">
+  <thead><tr><th>Letter</th><th>Count</th><th>Per word</th><th>Frequency</th></tr></thead>
+  <tbody>
+  <tr><td class="freq-letter">s</td><td class="freq-count">2,587</td><td class="freq-rate">0.554</td><td class="freq-bar" style="background:linear-gradient(to right, var(--md-primary-fg-color, #4051b5) 100.0%, transparent 100.0%)"></td></tr>
+  <tr><td class="freq-letter">e</td><td class="freq-count">2,458</td><td class="freq-rate">0.527</td><td class="freq-bar" style="background:linear-gradient(to right, var(--md-primary-fg-color, #4051b5) 95.0%, transparent 95.0%)"></td></tr>
+  <tr><td class="freq-letter">a</td><td class="freq-count">1,866</td><td class="freq-rate">0.400</td><td class="freq-bar" style="background:linear-gradient(to right, var(--md-primary-fg-color, #4051b5) 72.1%, transparent 72.1%)"></td></tr>
+  <tr><td class="freq-letter">r</td><td class="freq-count">1,509</td><td class="freq-rate">0.323</td><td class="freq-bar" style="background:linear-gradient(to right, var(--md-primary-fg-color, #4051b5) 58.3%, transparent 58.3%)"></td></tr>
+  <tr><td class="freq-letter">o</td><td class="freq-count">1,494</td><td class="freq-rate">0.320</td><td class="freq-bar" style="background:linear-gradient(to right, var(--md-primary-fg-color, #4051b5) 57.8%, transparent 57.8%)"></td></tr>
+  <tr><td class="freq-letter">l</td><td class="freq-count">1,323</td><td class="freq-rate">0.283</td><td class="freq-bar" style="background:linear-gradient(to right, var(--md-primary-fg-color, #4051b5) 51.1%, transparent 51.1%)"></td></tr>
+  <tr><td class="freq-letter">i</td><td class="freq-count">1,308</td><td class="freq-rate">0.280</td><td class="freq-bar" style="background:linear-gradient(to right, var(--md-primary-fg-color, #4051b5) 50.6%, transparent 50.6%)"></td></tr>
+  <tr><td class="freq-letter">t</td><td class="freq-count">1,280</td><td class="freq-rate">0.274</td><td class="freq-bar" style="background:linear-gradient(to right, var(--md-primary-fg-color, #4051b5) 49.5%, transparent 49.5%)"></td></tr>
+  <tr><td class="freq-letter">n</td><td class="freq-count">1,053</td><td class="freq-rate">0.226</td><td class="freq-bar" style="background:linear-gradient(to right, var(--md-primary-fg-color, #4051b5) 40.7%, transparent 40.7%)"></td></tr>
+  <tr><td class="freq-letter">d</td><td class="freq-count">1,006</td><td class="freq-rate">0.216</td><td class="freq-bar" style="background:linear-gradient(to right, var(--md-primary-fg-color, #4051b5) 38.9%, transparent 38.9%)"></td></tr>
+  <tr><td class="freq-letter">u</td><td class="freq-count">837</td><td class="freq-rate">0.179</td><td class="freq-bar" style="background:linear-gradient(to right, var(--md-primary-fg-color, #4051b5) 32.4%, transparent 32.4%)"></td></tr>
+  <tr><td class="freq-letter">c</td><td class="freq-count">811</td><td class="freq-rate">0.174</td><td class="freq-bar" style="background:linear-gradient(to right, var(--md-primary-fg-color, #4051b5) 31.3%, transparent 31.3%)"></td></tr>
+  <tr><td class="freq-letter">p</td><td class="freq-count">763</td><td class="freq-rate">0.163</td><td class="freq-bar" style="background:linear-gradient(to right, var(--md-primary-fg-color, #4051b5) 29.5%, transparent 29.5%)"></td></tr>
+  <tr><td class="freq-letter">m</td><td class="freq-count">652</td><td class="freq-rate">0.140</td><td class="freq-bar" style="background:linear-gradient(to right, var(--md-primary-fg-color, #4051b5) 25.2%, transparent 25.2%)"></td></tr>
+  <tr><td class="freq-letter">h</td><td class="freq-count">651</td><td class="freq-rate">0.139</td><td class="freq-bar" style="background:linear-gradient(to right, var(--md-primary-fg-color, #4051b5) 25.2%, transparent 25.2%)"></td></tr>
+  <tr><td class="freq-letter">y</td><td class="freq-count">640</td><td class="freq-rate">0.137</td><td class="freq-bar" style="background:linear-gradient(to right, var(--md-primary-fg-color, #4051b5) 24.7%, transparent 24.7%)"></td></tr>
+  <tr><td class="freq-letter">g</td><td class="freq-count">565</td><td class="freq-rate">0.121</td><td class="freq-bar" style="background:linear-gradient(to right, var(--md-primary-fg-color, #4051b5) 21.8%, transparent 21.8%)"></td></tr>
+  <tr><td class="freq-letter">b</td><td class="freq-count">562</td><td class="freq-rate">0.120</td><td class="freq-bar" style="background:linear-gradient(to right, var(--md-primary-fg-color, #4051b5) 21.7%, transparent 21.7%)"></td></tr>
+  <tr><td class="freq-letter">k</td><td class="freq-count">492</td><td class="freq-rate">0.105</td><td class="freq-bar" style="background:linear-gradient(to right, var(--md-primary-fg-color, #4051b5) 19.0%, transparent 19.0%)"></td></tr>
+  <tr><td class="freq-letter">f</td><td class="freq-count">454</td><td class="freq-rate">0.097</td><td class="freq-bar" style="background:linear-gradient(to right, var(--md-primary-fg-color, #4051b5) 17.5%, transparent 17.5%)"></td></tr>
+  <tr><td class="freq-letter">w</td><td class="freq-count">423</td><td class="freq-rate">0.091</td><td class="freq-bar" style="background:linear-gradient(to right, var(--md-primary-fg-color, #4051b5) 16.4%, transparent 16.4%)"></td></tr>
+  <tr><td class="freq-letter">v</td><td class="freq-count">270</td><td class="freq-rate">0.058</td><td class="freq-bar" style="background:linear-gradient(to right, var(--md-primary-fg-color, #4051b5) 10.4%, transparent 10.4%)"></td></tr>
+  <tr><td class="freq-letter">x</td><td class="freq-count">118</td><td class="freq-rate">0.025</td><td class="freq-bar" style="background:linear-gradient(to right, var(--md-primary-fg-color, #4051b5) 4.6%, transparent 4.6%)"></td></tr>
+  <tr><td class="freq-letter">z</td><td class="freq-count">100</td><td class="freq-rate">0.021</td><td class="freq-bar" style="background:linear-gradient(to right, var(--md-primary-fg-color, #4051b5) 3.9%, transparent 3.9%)"></td></tr>
+  <tr><td class="freq-letter">j</td><td class="freq-count">70</td><td class="freq-rate">0.015</td><td class="freq-bar" style="background:linear-gradient(to right, var(--md-primary-fg-color, #4051b5) 2.7%, transparent 2.7%)"></td></tr>
+  <tr><td class="freq-letter">q</td><td class="freq-count">43</td><td class="freq-rate">0.009</td><td class="freq-bar" style="background:linear-gradient(to right, var(--md-primary-fg-color, #4051b5) 1.7%, transparent 1.7%)"></td></tr>
+  </tbody>
+</table>

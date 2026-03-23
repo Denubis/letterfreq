@@ -1,5 +1,97 @@
-def main():
-    print("Hello from letterfreq!")
+"""Compute overall letter frequencies from five-letter English words and generate docs/index.md."""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+import polars as pl
+
+WORD_FILE = Path("/usr/share/dict/words")
+DOCS_DIR = Path(__file__).parent / "docs"
+INDEX_MD = DOCS_DIR / "index.md"
+
+
+def load_words(path: Path = WORD_FILE) -> list[str]:
+    """Read word list and return only lowercase five-letter words."""
+    pattern = re.compile(r"^[a-z]{5}$")
+    text = path.read_text()
+    return [w for w in text.splitlines() if pattern.match(w)]
+
+
+def compute_overall_frequencies(words: list[str]) -> pl.DataFrame:
+    """Compute overall letter frequency counts.
+
+    Returns a DataFrame with columns: letter, len (count), sorted by count descending.
+    """
+    df = pl.DataFrame({"word": words})
+    # Polars str.split("") produces empty strings at boundaries; filter them out
+    freq = (
+        df.with_columns(pl.col("word").str.split("").alias("letters"))
+        .explode("letters")
+        .filter(pl.col("letters") != "")
+        .rename({"letters": "letter"})
+        .group_by("letter")
+        .len()
+        .sort("len", descending=True)
+    )
+    return freq
+
+
+def generate_frequency_table_html(freq: pl.DataFrame, word_count: int) -> str:
+    """Generate an HTML frequency table with bar visualisation."""
+    max_count = freq["len"].max()
+    rows: list[str] = []
+    for row in freq.iter_rows(named=True):
+        letter = row["letter"]
+        count = row["len"]
+        pct = count / max_count * 100
+        freq_per_word = count / word_count
+        rows.append(
+            f'  <tr>'
+            f'<td class="freq-letter">{letter}</td>'
+            f'<td class="freq-count">{count:,}</td>'
+            f'<td class="freq-rate">{freq_per_word:.3f}</td>'
+            f'<td class="freq-bar" style="background:linear-gradient(to right, '
+            f'var(--md-primary-fg-color, #4051b5) {pct:.1f}%, transparent {pct:.1f}%)">'
+            f'</td>'
+            f'</tr>'
+        )
+    return (
+        '<table class="freq-table">\n'
+        "  <thead><tr>"
+        '<th>Letter</th><th>Count</th><th>Per word</th><th>Frequency</th>'
+        "</tr></thead>\n"
+        "  <tbody>\n"
+        + "\n".join(rows)
+        + "\n  </tbody>\n</table>"
+    )
+
+
+def generate_page(words: list[str], freq: pl.DataFrame) -> str:
+    """Generate the full docs/index.md content."""
+    word_count = len(words)
+    table_html = generate_frequency_table_html(freq, word_count)
+
+    return (
+        "---\n"
+        "icon: null\n"
+        "---\n\n"
+        "# Five-Letter Word Frequencies\n\n"
+        f"Analysis of **{word_count:,}** five-letter words "
+        f"from `/usr/share/dict/words`.\n\n"
+        "## Overall Letter Frequencies\n\n"
+        f"{table_html}\n"
+    )
+
+
+def main() -> None:
+    words = load_words()
+    freq = compute_overall_frequencies(words)
+    page = generate_page(words, freq)
+    INDEX_MD.parent.mkdir(parents=True, exist_ok=True)
+    INDEX_MD.write_text(page)
+    print(f"Generated {INDEX_MD} ({len(words)} words, {freq['len'].sum()} total letters)")
 
 
 if __name__ == "__main__":
