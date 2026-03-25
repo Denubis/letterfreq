@@ -70,6 +70,39 @@ def compute_positional_unigrams(words: list[str]) -> dict[str, list[int]]:
     return result
 
 
+def compute_bigrams(words: list[str]) -> dict[str, dict[str, dict[str, int]]]:
+    """Compute bigram frequencies for adjacent position pairs.
+
+    Returns a dict keyed by pair name (e.g. "1_2", "2_3", "3_4", "4_5")
+    with values being nested dicts: {first_letter: {second_letter: count}}.
+    Sparse representation — zero-count pairs omitted.
+    """
+    df = pl.DataFrame({"word": words})
+    result: dict[str, dict[str, dict[str, int]]] = {}
+
+    for i in range(4):
+        pair_name = f"{i + 1}_{i + 2}"
+        counts = (
+            df.select(
+                pl.col("word").str.slice(i, 1).alias("first"),
+                pl.col("word").str.slice(i + 1, 1).alias("second"),
+            )
+            .group_by(["first", "second"])
+            .len()
+        )
+
+        pair_dict: dict[str, dict[str, int]] = {}
+        for row in counts.iter_rows(named=True):
+            first = row["first"]
+            second = row["second"]
+            count = row["len"]
+            pair_dict.setdefault(first, {})[second] = count
+
+        result[pair_name] = pair_dict
+
+    return result
+
+
 def generate_frequency_table_html(freq: pl.DataFrame, word_count: int) -> str:
     """Generate an HTML frequency table with bar visualisation."""
     max_count = freq["len"].max()
@@ -132,12 +165,59 @@ def generate_heatmap_html(unigrams: dict[str, list[int]]) -> str:
     )
 
 
+def generate_bigram_html(bigrams: dict[str, dict[str, dict[str, int]]]) -> str:
+    """Generate collapsible bigram heatmap grids for all 4 adjacent position pairs."""
+    letters = list(string.ascii_lowercase)
+    sections: list[str] = []
+
+    for i in range(4):
+        pair_name = f"{i + 1}_{i + 2}"
+        pair_data = bigrams[pair_name]
+
+        # Find max count for this grid's normalisation
+        max_count = max(
+            (count for second_dict in pair_data.values() for count in second_dict.values()),
+            default=1,
+        )
+
+        rows: list[str] = []
+        for first in letters:
+            cells: list[str] = []
+            for second in letters:
+                count = pair_data.get(first, {}).get(second, 0)
+                cells.append(_heatmap_cell(count, max_count))
+            rows.append(
+                f'  <tr><th class="row-label">{first}</th>{"".join(cells)}</tr>'
+            )
+
+        header_cells = "".join(f"<th>{l}</th>" for l in letters)
+        header = f"  <thead><tr><th></th>{header_cells}</tr></thead>"
+
+        table = (
+            '<table class="heatmap bigram-grid">\n'
+            f"{header}\n"
+            "  <tbody>\n"
+            + "\n".join(rows)
+            + "\n  </tbody>\n</table>"
+        )
+
+        sections.append(
+            f"<details>\n"
+            f"<summary>Positions {i + 1}\u2013{i + 2}</summary>\n"
+            f"{table}\n"
+            f"</details>"
+        )
+
+    return "\n\n".join(sections)
+
+
 def generate_page(words: list[str], freq: pl.DataFrame) -> str:
     """Generate the full docs/index.md content."""
     word_count = len(words)
     table_html = generate_frequency_table_html(freq, word_count)
     unigrams = compute_positional_unigrams(words)
     heatmap_html = generate_heatmap_html(unigrams)
+    bigrams = compute_bigrams(words)  # noqa: F841 — HTML generation in next step
 
     return (
         "---\n"
