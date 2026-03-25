@@ -95,11 +95,46 @@ def generate_frequency_table_html(freq: pl.DataFrame, word_count: int) -> str:
     )
 
 
+def generate_heatmap_html(unigrams: dict[str, list[int]]) -> str:
+    """Generate an HTML heatmap table for positional unigram frequencies."""
+    # Find max count across the entire grid for colour scaling
+    max_count = max(c for counts in unigrams.values() for c in counts) or 1
+
+    rows: list[str] = []
+    for letter in sorted(unigrams):
+        cells = []
+        for count in unigrams[letter]:
+            intensity = count / max_count
+            r = 255
+            g = 255 - round(intensity * 200)
+            b = 255 - round(intensity * 200)
+            cells.append(
+                f'<td style="background-color: rgb({r}, {g}, {b})">{count}</td>'
+            )
+        rows.append(
+            f'  <tr><td class="row-label">{letter}</td>{"".join(cells)}</tr>'
+        )
+
+    header = (
+        "  <thead><tr><th></th>"
+        + "".join(f"<th>Pos {i}</th>" for i in range(1, 6))
+        + "</tr></thead>"
+    )
+    return (
+        '<table class="heatmap">\n'
+        f"{header}\n"
+        "  <tbody>\n"
+        + "\n".join(rows)
+        + "\n  </tbody>\n</table>"
+    )
+
+
 def generate_page(words: list[str], freq: pl.DataFrame) -> str:
     """Generate the full docs/index.md content."""
     word_count = len(words)
     table_html = generate_frequency_table_html(freq, word_count)
     unigrams = compute_positional_unigrams(words)
+    heatmap_html = generate_heatmap_html(unigrams)
 
     return (
         "---\n"
@@ -109,7 +144,9 @@ def generate_page(words: list[str], freq: pl.DataFrame) -> str:
         f"Analysis of **{word_count:,}** five-letter words "
         f"from `/usr/share/dict/words`.\n\n"
         "## Overall Letter Frequencies\n\n"
-        f"{table_html}\n"
+        f"{table_html}\n\n"
+        "## Positional Unigrams\n\n"
+        f"{heatmap_html}\n"
     )
 
 
