@@ -53,3 +53,23 @@
   background-color: hsl(0 60% calc(15% + var(--heat) * 35%));
   color: hsl(0 0% calc(70% + var(--heat) * 25%));
 }
+
+.bigram-grid {
+  font-size: 0.8em;
+}
+
+.bigram-grid td,
+.bigram-grid th {
+  min-width: 2em;
+  padding: 0.2em 0.3em;
+}
+
+details summary {
+  cursor: pointer;
+  padding: 0.5em 0;
+  font-weight: 600;
+}
+
+details {
+  margin: 0.5em 0;
+}

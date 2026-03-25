@@ -217,7 +217,8 @@ def generate_page(words: list[str], freq: pl.DataFrame) -> str:
     table_html = generate_frequency_table_html(freq, word_count)
     unigrams = compute_positional_unigrams(words)
     heatmap_html = generate_heatmap_html(unigrams)
-    bigrams = compute_bigrams(words)  # noqa: F841 — HTML generation in next step
+    bigrams = compute_bigrams(words)
+    bigram_html = generate_bigram_html(bigrams)
 
     return (
         "---\n"
@@ -229,7 +230,9 @@ def generate_page(words: list[str], freq: pl.DataFrame) -> str:
         "## Overall Letter Frequencies\n\n"
         f"{table_html}\n\n"
         "## Positional Unigrams\n\n"
-        f"{heatmap_html}\n"
+        f"{heatmap_html}\n\n"
+        "## Positional Bigrams\n\n"
+        f"{bigram_html}\n"
     )
 
 
