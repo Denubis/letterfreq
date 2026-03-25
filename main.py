@@ -24,13 +24,9 @@ def compute_overall_frequencies(words: list[str]) -> pl.DataFrame:
 
     Returns a DataFrame with columns: letter, len (count), sorted by count descending.
     """
-    df = pl.DataFrame({"word": words})
-    # Polars str.split("") produces empty strings at boundaries; filter them out
     freq = (
-        df.with_columns(pl.col("word").str.split("").alias("letters"))
-        .explode("letters")
-        .filter(pl.col("letters") != "")
-        .rename({"letters": "letter"})
+        pl.DataFrame({"word": words})
+        .select(pl.col("word").str.split("").explode().drop_nulls().alias("letter"))
         .group_by("letter")
         .len()
         .sort("len", descending=True)
