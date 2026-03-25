@@ -103,6 +103,43 @@ def compute_bigrams(words: list[str]) -> dict[str, dict[str, dict[str, int]]]:
     return result
 
 
+def get_neighbour_distributions(
+    bigrams: dict[str, dict[str, dict[str, int]]], letter: str, position: int
+) -> dict[str, dict[str, int]]:
+    """Return neighbour frequency distributions for a letter at a given position.
+
+    For position 1: only right neighbour (from "1_2" grid, row slice).
+    For position 5: only left neighbour (from "4_5" grid, column slice).
+    For positions 2-4: both left and right.
+
+    Left neighbour: from the (position-1)_(position) grid, column slice —
+        all first_letters paired with this letter as second_letter.
+    Right neighbour: from the (position)_(position+1) grid, row slice —
+        this letter's row.
+    """
+    result: dict[str, dict[str, int]] = {}
+
+    # Left neighbour: letters at position-1 that precede this letter at position
+    if position > 1:
+        pair_key = f"{position - 1}_{position}"
+        pair_data = bigrams[pair_key]
+        left: dict[str, int] = {}
+        for first_letter, seconds in pair_data.items():
+            count = seconds.get(letter, 0)
+            if count > 0:
+                left[first_letter] = count
+        result["left"] = left
+
+    # Right neighbour: letters at position+1 that follow this letter at position
+    if position < 5:
+        pair_key = f"{position}_{position + 1}"
+        pair_data = bigrams[pair_key]
+        right = {sec: cnt for sec, cnt in pair_data.get(letter, {}).items() if cnt > 0}
+        result["right"] = right
+
+    return result
+
+
 def generate_frequency_table_html(freq: pl.DataFrame, word_count: int) -> str:
     """Generate an HTML frequency table with bar visualisation."""
     max_count = freq["len"].max()

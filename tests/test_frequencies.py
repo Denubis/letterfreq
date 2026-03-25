@@ -6,7 +6,12 @@ import string
 
 import pytest
 
-from main import compute_bigrams, compute_overall_frequencies, compute_positional_unigrams
+from main import (
+    compute_bigrams,
+    compute_overall_frequencies,
+    compute_positional_unigrams,
+    get_neighbour_distributions,
+)
 
 
 def test_frequency_sum_equals_five_times_word_count(words):
@@ -108,3 +113,49 @@ def test_bigram_spot_check_th(words):
     assert polars_count == manual_count, (
         f"bigrams['1_2']['t']['h']: polars={polars_count}, manual={manual_count}"
     )
+
+
+# --- Neighbour distribution / drill-down tests ---
+
+
+@pytest.fixture(scope="session")
+def bigrams(words):
+    return compute_bigrams(words)
+
+
+def test_neighbour_middle_position_has_both(words, bigrams):
+    """For letter 'e' at position 3, both left and right neighbours are returned."""
+    result = get_neighbour_distributions(bigrams, "e", 3)
+    assert "left" in result, "Expected 'left' key for middle position"
+    assert "right" in result, "Expected 'right' key for middle position"
+    assert len(result["left"]) > 0, "Left neighbour distribution should be non-empty"
+    assert len(result["right"]) > 0, "Right neighbour distribution should be non-empty"
+
+
+def test_neighbour_position_1_only_right(words, bigrams):
+    """For any letter at position 1, only right neighbour is returned."""
+    result = get_neighbour_distributions(bigrams, "s", 1)
+    assert "left" not in result, "Position 1 should not have left neighbour"
+    assert "right" in result, "Position 1 should have right neighbour"
+
+
+def test_neighbour_position_5_only_left(words, bigrams):
+    """For any letter at position 5, only left neighbour is returned."""
+    result = get_neighbour_distributions(bigrams, "s", 5)
+    assert "right" not in result, "Position 5 should not have right neighbour"
+    assert "left" in result, "Position 5 should have left neighbour"
+
+
+def test_neighbour_sum_matches_unigram(words, bigrams):
+    """Sum of right-neighbour counts for letter X at position N equals unigram count."""
+    unigrams = compute_positional_unigrams(words)
+    # Test several letter/position combos
+    for letter in ["e", "s", "t", "a"]:
+        for pos in range(1, 5):  # positions 1-4 have right neighbours
+            result = get_neighbour_distributions(bigrams, letter, pos)
+            right_sum = sum(result["right"].values())
+            unigram_count = unigrams[letter][pos - 1]  # 0-indexed
+            assert right_sum == unigram_count, (
+                f"Right-neighbour sum for '{letter}' at pos {pos}: "
+                f"{right_sum} != unigram {unigram_count}"
+            )
