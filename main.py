@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import string
 from pathlib import Path
 
 import polars as pl
@@ -61,6 +62,10 @@ def compute_positional_unigrams(words: list[str]) -> dict[str, list[int]]:
     for row in matrix.iter_rows(named=True):
         letter = row["letter"]
         result[letter] = [row.get(f"pos{i + 1}", 0) or 0 for i in range(5)]
+
+    # Ensure all 26 letters are present (rare letters may not appear at all positions)
+    for letter in string.ascii_lowercase:
+        result.setdefault(letter, [0, 0, 0, 0, 0])
 
     return result
 

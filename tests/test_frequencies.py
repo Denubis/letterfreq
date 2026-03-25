@@ -60,7 +60,7 @@ def test_positional_unigram_column_sums(words):
     unigrams = compute_positional_unigrams(words)
     word_count = len(words)
     for pos in range(5):
-        total = sum(unigrams[letter][pos] for letter in unigrams)
+        total = sum(unigrams[letter][pos] for letter in string.ascii_lowercase)
         assert total == word_count, (
             f"Position {pos + 1}: sum {total} != word_count {word_count}"
         )
