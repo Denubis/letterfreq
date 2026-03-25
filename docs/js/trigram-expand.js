@@ -53,7 +53,20 @@
           return;
         }
 
-        const data = await loadTrigramData();
+        // Close any previously active expansion (may be in a different grid)
+        document.querySelectorAll(".trigram-expansion.active").forEach(function(div) {
+          div.classList.remove("active");
+          div.innerHTML = "";
+        });
+
+        let data;
+        try {
+          data = await loadTrigramData();
+        } catch (e) {
+          expansionDiv.innerHTML = '<p>Failed to load trigram data.</p>';
+          expansionDiv.classList.add("active");
+          return;
+        }
         const completions = data[grid]?.[known1]?.[known2];
 
         expansionDiv.innerHTML = buildCompletionHTML(completions);

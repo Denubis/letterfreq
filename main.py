@@ -375,7 +375,7 @@ def generate_bigram_html(bigrams: dict[str, dict[str, dict[str, int]]]) -> str:
 def _trigram_cell(count: int, max_count: int, known1: str, known2: str) -> str:
     """Render a single trigram heatmap <td> with data attributes for JS interaction."""
     if count == 0:
-        return '<td class="trigram-cell empty">0</td>'
+        return '<td class="trigram-cell empty"></td>'
     intensity = count / max_count if max_count else 0
     return (
         f'<td class="trigram-cell" data-known1="{known1}" data-known2="{known2}"'
