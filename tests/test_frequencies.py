@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import string
 
-from main import compute_overall_frequencies, compute_positional_unigrams
+from main import compute_bigrams, compute_overall_frequencies, compute_positional_unigrams
 
 
 def test_frequency_sum_equals_five_times_word_count(words):
@@ -80,4 +80,43 @@ def test_positional_unigram_spot_check_e_pos5(words):
     manual_count = sum(1 for w in words if w[4] == "e")
     assert unigrams["e"][4] == manual_count, (
         f"'e' at pos 5: polars={unigrams['e'][4]}, manual={manual_count}"
+    )
+
+
+# --- Bigram tests ---
+
+
+def test_bigram_position_1_2_sum(words):
+    """AC2.3: Sum all counts in the '1_2' bigram grid equals word_count."""
+    bigrams = compute_bigrams(words)
+    total = sum(
+        count
+        for second_dict in bigrams["1_2"].values()
+        for count in second_dict.values()
+    )
+    assert total == len(words), (
+        f"Position 1_2: sum {total} != word_count {len(words)}"
+    )
+
+
+def test_bigram_position_4_5_sum(words):
+    """AC2.3: Sum all counts in the '4_5' bigram grid equals word_count."""
+    bigrams = compute_bigrams(words)
+    total = sum(
+        count
+        for second_dict in bigrams["4_5"].values()
+        for count in second_dict.values()
+    )
+    assert total == len(words), (
+        f"Position 4_5: sum {total} != word_count {len(words)}"
+    )
+
+
+def test_bigram_spot_check_th(words):
+    """Spot-check: count of words starting with 'th' matches bigrams['1_2']['t']['h']."""
+    bigrams = compute_bigrams(words)
+    manual_count = sum(1 for w in words if w[:2] == "th")
+    polars_count = bigrams["1_2"].get("t", {}).get("h", 0)
+    assert polars_count == manual_count, (
+        f"bigrams['1_2']['t']['h']: polars={polars_count}, manual={manual_count}"
     )
