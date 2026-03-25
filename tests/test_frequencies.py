@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import string
 
+import pytest
+
 from main import compute_bigrams, compute_overall_frequencies, compute_positional_unigrams
 
 
@@ -86,30 +88,16 @@ def test_positional_unigram_spot_check_e_pos5(words):
 # --- Bigram tests ---
 
 
-def test_bigram_position_1_2_sum(words):
-    """AC2.3: Sum all counts in the '1_2' bigram grid equals word_count."""
+@pytest.mark.parametrize("pair", ["1_2", "2_3", "3_4", "4_5"])
+def test_bigram_position_sum(words, pair):
+    """AC2.3: Sum of all bigram counts at each position pair equals word_count."""
     bigrams = compute_bigrams(words)
     total = sum(
         count
-        for second_dict in bigrams["1_2"].values()
-        for count in second_dict.values()
+        for seconds in bigrams[pair].values()
+        for count in seconds.values()
     )
-    assert total == len(words), (
-        f"Position 1_2: sum {total} != word_count {len(words)}"
-    )
-
-
-def test_bigram_position_4_5_sum(words):
-    """AC2.3: Sum all counts in the '4_5' bigram grid equals word_count."""
-    bigrams = compute_bigrams(words)
-    total = sum(
-        count
-        for second_dict in bigrams["4_5"].values()
-        for count in second_dict.values()
-    )
-    assert total == len(words), (
-        f"Position 4_5: sum {total} != word_count {len(words)}"
-    )
+    assert total == len(words), f"Pair {pair}: expected {len(words)}, got {total}"
 
 
 def test_bigram_spot_check_th(words):

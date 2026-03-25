@@ -64,6 +64,7 @@
   padding: 0.2em 0.3em;
 }
 
+/* Global details styling — shared by bigram and trigram sections */
 details summary {
   cursor: pointer;
   padding: 0.5em 0;

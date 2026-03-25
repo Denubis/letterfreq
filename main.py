@@ -190,7 +190,7 @@ def generate_bigram_html(bigrams: dict[str, dict[str, dict[str, int]]]) -> str:
                 f'  <tr><th class="row-label">{first}</th>{"".join(cells)}</tr>'
             )
 
-        header_cells = "".join(f"<th>{l}</th>" for l in letters)
+        header_cells = "".join(f"<th>{ch}</th>" for ch in letters)
         header = f"  <thead><tr><th></th>{header_cells}</tr></thead>"
 
         table = (
