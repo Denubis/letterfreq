@@ -74,3 +74,57 @@ details summary {
 details {
   margin: 0.5em 0;
 }
+
+/* Drill-down inside bigram row headers */
+.drill-down {
+  display: inline;
+}
+
+.drill-down summary {
+  cursor: pointer;
+  font-weight: 700;
+  text-transform: uppercase;
+  list-style: none;
+  padding: 0;
+}
+
+.drill-down summary::-webkit-details-marker {
+  display: none;
+}
+
+.neighbour-bars {
+  text-align: left;
+  padding: 0.5em;
+  min-width: 200px;
+}
+
+.neighbour-bars h4 {
+  margin: 0.5em 0 0.25em;
+  font-size: 0.85em;
+}
+
+.bar-row {
+  display: flex;
+  align-items: center;
+  margin: 0.1em 0;
+  font-size: 0.8em;
+}
+
+.bar-label {
+  width: 1.5em;
+  text-align: right;
+  margin-right: 0.4em;
+  font-weight: 600;
+}
+
+.bar {
+  height: 0.8em;
+  background-color: var(--md-primary-fg-color, #4051b5);
+  border-radius: 2px;
+  min-width: 1px;
+}
+
+.bar-count {
+  margin-left: 0.4em;
+  color: var(--md-default-fg-color--light, #666);
+}

@@ -202,6 +202,44 @@ def generate_heatmap_html(unigrams: dict[str, list[int]]) -> str:
     )
 
 
+def _neighbour_bars_html(
+    bigrams: dict[str, dict[str, dict[str, int]]], letter: str, pos: int
+) -> str:
+    """Generate the neighbour frequency bars HTML for a letter at a position."""
+    neighbours = get_neighbour_distributions(bigrams, letter, pos)
+    parts: list[str] = []
+
+    if "left" in neighbours and neighbours["left"]:
+        sorted_left = sorted(neighbours["left"].items(), key=lambda x: x[1], reverse=True)
+        max_left = sorted_left[0][1] if sorted_left else 1
+        parts.append(f"<h4>Position {pos - 1} \u2192 {letter}</h4>")
+        for nb_letter, count in sorted_left:
+            width = count / max_left * 100
+            parts.append(
+                f'<div class="bar-row">'
+                f'<span class="bar-label">{nb_letter}</span>'
+                f'<span class="bar" style="width: {width:.1f}%"></span>'
+                f'<span class="bar-count">{count}</span>'
+                f"</div>"
+            )
+
+    if "right" in neighbours and neighbours["right"]:
+        sorted_right = sorted(neighbours["right"].items(), key=lambda x: x[1], reverse=True)
+        max_right = sorted_right[0][1] if sorted_right else 1
+        parts.append(f"<h4>{letter} \u2192 Position {pos + 1}</h4>")
+        for nb_letter, count in sorted_right:
+            width = count / max_right * 100
+            parts.append(
+                f'<div class="bar-row">'
+                f'<span class="bar-label">{nb_letter}</span>'
+                f'<span class="bar" style="width: {width:.1f}%"></span>'
+                f'<span class="bar-count">{count}</span>'
+                f"</div>"
+            )
+
+    return "\n".join(parts)
+
+
 def generate_bigram_html(bigrams: dict[str, dict[str, dict[str, int]]]) -> str:
     """Generate collapsible bigram heatmap grids for all 4 adjacent position pairs."""
     letters = list(string.ascii_lowercase)
@@ -210,6 +248,7 @@ def generate_bigram_html(bigrams: dict[str, dict[str, dict[str, int]]]) -> str:
     for i in range(4):
         pair_name = f"{i + 1}_{i + 2}"
         pair_data = bigrams[pair_name]
+        pos_a = i + 1  # the row-header position
 
         # Find max count for this grid's normalisation
         max_count = max(
@@ -223,9 +262,24 @@ def generate_bigram_html(bigrams: dict[str, dict[str, dict[str, int]]]) -> str:
             for second in letters:
                 count = pair_data.get(first, {}).get(second, 0)
                 cells.append(_heatmap_cell(count, max_count))
-            rows.append(
-                f'  <tr><th class="row-label">{first}</th>{"".join(cells)}</tr>'
-            )
+
+            # Check if this letter has any occurrences at this position
+            row_sum = sum(pair_data.get(first, {}).values())
+            if row_sum == 0:
+                # Plain text — no drill-down for zero-occurrence letters
+                header_cell = f'<th class="row-label">{first}</th>'
+            else:
+                bars_html = _neighbour_bars_html(bigrams, first, pos_a)
+                header_cell = (
+                    "<th>"
+                    '<details class="drill-down">'
+                    f"<summary>{first}</summary>"
+                    f'<div class="neighbour-bars">{bars_html}</div>'
+                    "</details>"
+                    "</th>"
+                )
+
+            rows.append(f"  <tr>{header_cell}{''.join(cells)}</tr>")
 
         header_cells = "".join(f"<th>{ch}</th>" for ch in letters)
         header = f"  <thead><tr><th></th>{header_cells}</tr></thead>"
