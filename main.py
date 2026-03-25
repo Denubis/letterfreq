@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import string
 from pathlib import Path
@@ -10,6 +11,7 @@ import polars as pl
 
 WORD_FILE = Path("/usr/share/dict/words")
 DOCS_DIR = Path(__file__).parent / "docs"
+DATA_DIR = DOCS_DIR / "data"
 INDEX_MD = DOCS_DIR / "index.md"
 
 
@@ -101,6 +103,74 @@ def compute_bigrams(words: list[str]) -> dict[str, dict[str, dict[str, int]]]:
         result[pair_name] = pair_dict
 
     return result
+
+
+def compute_trigrams(
+    words: list[str],
+) -> tuple[dict[str, dict[str, dict[str, dict[str, int]]]], dict[str, dict[str, dict[str, int]]]]:
+    """Compute trigram gap frequencies for 3 gap positions x 3 word windows.
+
+    Windows: positions 1-2-3, 2-3-4, 3-4-5 (1-indexed).
+    Gap positions: 1st, 2nd, 3rd letter in trigram.
+
+    known1 = lower-indexed word position, known2 = higher-indexed.
+
+    Returns (detail, summary) where:
+    - detail: {grid_name: {known1: {known2: {gap_letter: count}}}}
+    - summary: {grid_name: {known1: {known2: total_count}}}
+    """
+    # Define the 9 grids: (grid_name, gap_word_pos, known1_word_pos, known2_word_pos)
+    # All positions are 0-indexed into the word
+    windows = [(0, 1, 2), (1, 2, 3), (2, 3, 4)]  # win123, win234, win345
+    window_names = ["win123", "win234", "win345"]
+
+    grids: list[tuple[str, int, int, int]] = []
+    for win_name, (p1, p2, p3) in zip(window_names, windows, strict=True):
+        # gap1: gap at p1, known at p2 (known1), p3 (known2)
+        grids.append((f"gap1_{win_name}", p1, p2, p3))
+        # gap2: gap at p2, known at p1 (known1), p3 (known2)
+        grids.append((f"gap2_{win_name}", p2, p1, p3))
+        # gap3: gap at p3, known at p1 (known1), p2 (known2)
+        grids.append((f"gap3_{win_name}", p3, p1, p2))
+
+    df = pl.DataFrame({"word": words})
+
+    # Pre-extract all 5 positions
+    df = df.with_columns(
+        pl.col("word").str.slice(i, 1).alias(f"p{i}") for i in range(5)
+    )
+
+    detail: dict[str, dict[str, dict[str, dict[str, int]]]] = {}
+    summary: dict[str, dict[str, dict[str, int]]] = {}
+
+    for grid_name, gap_pos, k1_pos, k2_pos in grids:
+        counts = (
+            df.select(
+                pl.col(f"p{k1_pos}").alias("known1"),
+                pl.col(f"p{k2_pos}").alias("known2"),
+                pl.col(f"p{gap_pos}").alias("gap"),
+            )
+            .group_by(["known1", "known2", "gap"])
+            .len()
+        )
+
+        grid_detail: dict[str, dict[str, dict[str, int]]] = {}
+        grid_summary: dict[str, dict[str, int]] = {}
+
+        for row in counts.iter_rows(named=True):
+            k1 = row["known1"]
+            k2 = row["known2"]
+            gap = row["gap"]
+            count = row["len"]
+            grid_detail.setdefault(k1, {}).setdefault(k2, {})[gap] = count
+            grid_summary.setdefault(k1, {})[k2] = (
+                grid_summary.get(k1, {}).get(k2, 0) + count
+            )
+
+        detail[grid_name] = grid_detail
+        summary[grid_name] = grid_summary
+
+    return detail, summary
 
 
 def get_neighbour_distributions(
@@ -302,7 +372,82 @@ def generate_bigram_html(bigrams: dict[str, dict[str, dict[str, int]]]) -> str:
     return "\n\n".join(sections)
 
 
-def generate_page(words: list[str], freq: pl.DataFrame) -> str:
+def _trigram_cell(count: int, max_count: int, known1: str, known2: str) -> str:
+    """Render a single trigram heatmap <td> with data attributes for JS interaction."""
+    if count == 0:
+        return '<td class="trigram-cell empty">0</td>'
+    intensity = count / max_count if max_count else 0
+    return (
+        f'<td class="trigram-cell" data-known1="{known1}" data-known2="{known2}"'
+        f' data-count="{count}" style="--heat: {intensity:.3f}">{count:,}</td>'
+    )
+
+
+def generate_trigram_html(
+    trigram_summary: dict[str, dict[str, dict[str, int]]],
+) -> str:
+    """Generate 9 heatmap grids under Positional Trigrams, organised by gap position then window."""
+    letters = list(string.ascii_lowercase)
+    sections: list[str] = []
+
+    gap_labels = {
+        1: "Gap at position 1 (_XY)",
+        2: "Gap at position 2 (X_Y)",
+        3: "Gap at position 3 (XY_)",
+    }
+    window_labels = {
+        "win123": "Word positions 1-2-3",
+        "win234": "Word positions 2-3-4",
+        "win345": "Word positions 3-4-5",
+    }
+
+    for gap_pos in (1, 2, 3):
+        gap_section_parts: list[str] = [f"### {gap_labels[gap_pos]}\n"]
+
+        for win_name, win_label in window_labels.items():
+            grid_name = f"gap{gap_pos}_{win_name}"
+            grid_data = trigram_summary.get(grid_name, {})
+
+            # Find max count for normalisation
+            max_count = max(
+                (count for k2_dict in grid_data.values() for count in k2_dict.values()),
+                default=1,
+            )
+
+            rows: list[str] = []
+            for k1 in letters:
+                cells: list[str] = []
+                for k2 in letters:
+                    count = grid_data.get(k1, {}).get(k2, 0)
+                    cells.append(_trigram_cell(count, max_count, k1, k2))
+                rows.append(
+                    f'  <tr><td class="row-label">{k1}</td>{"".join(cells)}</tr>'
+                )
+
+            header_cells = "".join(f"<th>{ch}</th>" for ch in letters)
+            header = f"  <thead><tr><th></th>{header_cells}</tr></thead>"
+
+            table = (
+                f'<table class="heatmap trigram-grid" data-grid="{grid_name}">\n'
+                f"{header}\n"
+                "  <tbody>\n"
+                + "\n".join(rows)
+                + "\n  </tbody>\n</table>\n"
+                f'<div class="trigram-expansion" id="expand-{grid_name}"></div>'
+            )
+
+            gap_section_parts.append(f"#### {win_label}\n\n{table}\n")
+
+        sections.append("\n".join(gap_section_parts))
+
+    return "\n".join(sections)
+
+
+def generate_page(
+    words: list[str],
+    freq: pl.DataFrame,
+    trigram_summary: dict[str, dict[str, dict[str, int]]] | None = None,
+) -> str:
     """Generate the full docs/index.md content."""
     word_count = len(words)
     table_html = generate_frequency_table_html(freq, word_count)
@@ -310,6 +455,11 @@ def generate_page(words: list[str], freq: pl.DataFrame) -> str:
     heatmap_html = generate_heatmap_html(unigrams)
     bigrams = compute_bigrams(words)
     bigram_html = generate_bigram_html(bigrams)
+
+    trigram_section = ""
+    if trigram_summary is not None:
+        trigram_html = generate_trigram_html(trigram_summary)
+        trigram_section = f"\n\n## Positional Trigrams\n\n{trigram_html}\n"
 
     return (
         "---\n"
@@ -323,17 +473,26 @@ def generate_page(words: list[str], freq: pl.DataFrame) -> str:
         "## Positional Unigrams\n\n"
         f"{heatmap_html}\n\n"
         "## Positional Bigrams\n\n"
-        f"{bigram_html}\n"
+        f"{bigram_html}"
+        f"{trigram_section}"
     )
 
 
 def main() -> None:
     words = load_words()
     freq = compute_overall_frequencies(words)
-    page = generate_page(words, freq)
+    trigram_detail, trigram_summary = compute_trigrams(words)
+
+    # Write trigram detail data as JSON
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    trigrams_json = DATA_DIR / "trigrams.json"
+    trigrams_json.write_text(json.dumps(trigram_detail, sort_keys=True))
+
+    page = generate_page(words, freq, trigram_summary)
     INDEX_MD.parent.mkdir(parents=True, exist_ok=True)
     INDEX_MD.write_text(page)
     print(f"Generated {INDEX_MD} ({len(words)} words, {freq['len'].sum()} total letters)")
+    print(f"Generated {trigrams_json} ({len(trigram_detail)} grids)")
 
 
 if __name__ == "__main__":
