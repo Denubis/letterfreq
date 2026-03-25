@@ -147,7 +147,7 @@ def test_neighbour_position_5_only_left(words, bigrams):
 
 
 def test_neighbour_sum_matches_unigram(words, bigrams):
-    """Sum of right-neighbour counts for letter X at position N equals unigram count."""
+    """Sum of right- and left-neighbour counts for letter X at position N equals unigram count."""
     unigrams = compute_positional_unigrams(words)
     # Test several letter/position combos
     for letter in ["e", "s", "t", "a"]:
@@ -158,4 +158,13 @@ def test_neighbour_sum_matches_unigram(words, bigrams):
             assert right_sum == unigram_count, (
                 f"Right-neighbour sum for '{letter}' at pos {pos}: "
                 f"{right_sum} != unigram {unigram_count}"
+            )
+    for letter in ["e", "s", "a"]:
+        for pos in range(2, 6):  # positions 2-5 have left neighbours
+            result = get_neighbour_distributions(bigrams, letter, pos)
+            left_sum = sum(result["left"].values())
+            unigram_count = unigrams[letter][pos - 1]  # 0-indexed
+            assert left_sum == unigram_count, (
+                f"Left-neighbour sum for '{letter}' at pos {pos}: "
+                f"{left_sum} != unigram {unigram_count}"
             )
