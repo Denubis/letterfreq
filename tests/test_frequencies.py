@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import string
 
-from main import compute_overall_frequencies
+from main import compute_overall_frequencies, compute_positional_unigrams
 
 
 def test_frequency_sum_equals_five_times_word_count(words):
@@ -50,3 +50,34 @@ def test_all_words_are_five_letters(words):
     for w in words:
         assert len(w) == 5, f"Word {w!r} is not 5 characters"
         assert w.isalpha() and w.islower(), f"Word {w!r} is not lowercase alpha"
+
+
+# --- Positional unigram tests ---
+
+
+def test_positional_unigram_column_sums(words):
+    """AC2.2: For each position, the sum of all 26 letter counts equals word_count."""
+    unigrams = compute_positional_unigrams(words)
+    word_count = len(words)
+    for pos in range(5):
+        total = sum(unigrams[letter][pos] for letter in unigrams)
+        assert total == word_count, (
+            f"Position {pos + 1}: sum {total} != word_count {word_count}"
+        )
+
+
+def test_positional_unigram_all_26_letters(words):
+    """All 26 lowercase letters should have entries in the unigram dict."""
+    unigrams = compute_positional_unigrams(words)
+    assert set(unigrams.keys()) == set(string.ascii_lowercase), (
+        f"Missing letters: {set(string.ascii_lowercase) - set(unigrams.keys())}"
+    )
+
+
+def test_positional_unigram_spot_check_e_pos5(words):
+    """Spot-check: count of 'e' at position 5 matches manual count."""
+    unigrams = compute_positional_unigrams(words)
+    manual_count = sum(1 for w in words if w[4] == "e")
+    assert unigrams["e"][4] == manual_count, (
+        f"'e' at pos 5: polars={unigrams['e'][4]}, manual={manual_count}"
+    )
