@@ -128,3 +128,70 @@ details {
   margin-left: 0.4em;
   color: var(--md-default-fg-color--light, #666);
 }
+
+/* Trigram grids */
+.trigram-grid {
+  font-size: 0.8em;
+}
+
+.trigram-grid td,
+.trigram-grid th {
+  min-width: 2em;
+  padding: 0.2em 0.3em;
+}
+
+.trigram-cell {
+  cursor: pointer;
+}
+
+.trigram-cell.empty {
+  cursor: default;
+  opacity: 0.3;
+}
+
+.trigram-expansion {
+  display: none;
+  margin: 0.5em 0;
+  padding: 0.5em;
+  border: 1px solid var(--md-default-fg-color--lightest, #e0e0e0);
+  border-radius: 4px;
+}
+
+.trigram-expansion.active {
+  display: block;
+}
+
+.completion-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+}
+
+.completion-item {
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+  font-size: 0.9em;
+}
+
+.completion-letter {
+  font-weight: 700;
+  min-width: 1em;
+}
+
+.completion-bar {
+  height: 0.7em;
+  background-color: var(--md-primary-fg-color, #4051b5);
+  border-radius: 2px;
+  min-width: 1px;
+}
+
+.completion-count {
+  color: var(--md-default-fg-color--light, #666);
+  font-size: 0.85em;
+}
+
+.completion-pct {
+  color: var(--md-default-fg-color--light, #666);
+  font-size: 0.8em;
+}
