@@ -100,6 +100,12 @@ def generate_frequency_table_html(freq: pl.DataFrame, word_count: int) -> str:
     )
 
 
+def _heatmap_cell(count: int, max_count: int) -> str:
+    """Render a single heatmap <td> using a CSS custom property for intensity."""
+    intensity = count / max_count if max_count else 0
+    return f'<td style="--heat: {intensity:.3f}">{count:,}</td>'
+
+
 def generate_heatmap_html(unigrams: dict[str, list[int]]) -> str:
     """Generate an HTML heatmap table for positional unigram frequencies."""
     # Find max count across the entire grid for colour scaling
@@ -107,15 +113,7 @@ def generate_heatmap_html(unigrams: dict[str, list[int]]) -> str:
 
     rows: list[str] = []
     for letter in sorted(unigrams):
-        cells = []
-        for count in unigrams[letter]:
-            intensity = count / max_count
-            r = 255
-            g = 255 - round(intensity * 200)
-            b = 255 - round(intensity * 200)
-            cells.append(
-                f'<td style="background-color: rgb({r}, {g}, {b})">{count}</td>'
-            )
+        cells = [_heatmap_cell(count, max_count) for count in unigrams[letter]]
         rows.append(
             f'  <tr><td class="row-label">{letter}</td>{"".join(cells)}</tr>'
         )

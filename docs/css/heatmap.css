@@ -42,3 +42,14 @@
   font-weight: 700;
   text-transform: uppercase;
 }
+
+/* Heatmap colour scale — works in both light and dark mode */
+.heatmap td[style] {
+  background-color: hsl(0 75% calc(97% - var(--heat) * 45%));
+  color: hsl(0 0% calc(100% - var(--heat) * 80%));
+}
+
+[data-md-color-scheme="slate"] .heatmap td[style] {
+  background-color: hsl(0 60% calc(15% + var(--heat) * 35%));
+  color: hsl(0 0% calc(70% + var(--heat) * 25%));
+}
