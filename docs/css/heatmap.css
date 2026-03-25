@@ -1,0 +1,27 @@
+/* Base styles for frequency tables and heatmap visualisations */
+
+.freq-table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+}
+
+.freq-table td,
+.freq-table th {
+  padding: 0.35em 0.5em;
+  border: 1px solid var(--md-default-fg-color--lightest, #e0e0e0);
+  text-align: center;
+}
+
+.freq-table th {
+  font-weight: 600;
+}
+
+.freq-bar {
+  display: inline-block;
+  height: 1em;
+  min-width: 2px;
+  vertical-align: middle;
+  background: var(--md-primary-fg-color, #4051b5);
+  border-radius: 2px;
+}
