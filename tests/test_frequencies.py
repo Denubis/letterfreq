@@ -10,6 +10,7 @@ from main import (
     compute_bigrams,
     compute_overall_frequencies,
     compute_positional_unigrams,
+    compute_trigrams,
     get_neighbour_distributions,
 )
 
@@ -168,3 +169,53 @@ def test_neighbour_sum_matches_unigram(words, bigrams):
                 f"Left-neighbour sum for '{letter}' at pos {pos}: "
                 f"{left_sum} != unigram {unigram_count}"
             )
+
+
+# --- Trigram tests ---
+
+
+EXPECTED_TRIGRAM_KEYS = {
+    "gap1_win123", "gap2_win123", "gap3_win123",
+    "gap1_win234", "gap2_win234", "gap3_win234",
+    "gap1_win345", "gap2_win345", "gap3_win345",
+}
+
+
+def test_trigram_data_has_nine_keys(words):
+    """Verify 9 top-level keys in trigram data."""
+    detail, _summary = compute_trigrams(words)
+    assert set(detail.keys()) == EXPECTED_TRIGRAM_KEYS, (
+        f"Expected {EXPECTED_TRIGRAM_KEYS}, got {set(detail.keys())}"
+    )
+
+
+def test_trigram_gap1_win123_spot_check(words):
+    """For gap1_win123 with known1='h', known2='e' (positions 2,3), verify sum.
+
+    gap1_win123: gap at word position 1, known letters at positions 2,3.
+    known1='h' (pos 2), known2='e' (pos 3).
+    Manual count: words matching '^.he..$'.
+    """
+    detail, _summary = compute_trigrams(words)
+    completions = detail["gap1_win123"].get("h", {}).get("e", {})
+    polars_sum = sum(completions.values())
+    manual_count = sum(1 for w in words if w[1] == "h" and w[2] == "e")
+    assert polars_sum == manual_count, (
+        f"gap1_win123 h,e: polars_sum={polars_sum}, manual={manual_count}"
+    )
+
+
+def test_trigram_empty_pair_returns_no_data(words):
+    """Find a (known1, known2) pair that has no completions and verify it's absent."""
+    detail, _summary = compute_trigrams(words)
+    # gap1_win123: known at positions 2,3; gap at position 1.
+    # 'q' at position 2 and 'z' at position 3 — very unlikely combination.
+    manual_count = sum(1 for w in words if w[1] == "q" and w[2] == "z")
+    if manual_count == 0:
+        # Verify this pair is absent from the data
+        completions = detail["gap1_win123"].get("q", {}).get("z", {})
+        assert len(completions) == 0, (
+            f"Expected no completions for q,z but got {completions}"
+        )
+    else:
+        pytest.skip("q,z pair unexpectedly has words — pick a different pair")
