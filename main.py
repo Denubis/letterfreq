@@ -34,6 +34,37 @@ def compute_overall_frequencies(words: list[str]) -> pl.DataFrame:
     return freq
 
 
+def compute_positional_unigrams(words: list[str]) -> dict[str, list[int]]:
+    """Compute letter frequency at each position (1-5).
+
+    Returns a dict mapping each letter to a list of 5 counts:
+    {letter: [pos1_count, pos2_count, pos3_count, pos4_count, pos5_count]}
+    """
+    df = pl.DataFrame({"word": words})
+
+    # Extract each position as a separate column
+    df = df.with_columns(
+        pl.col("word").str.slice(i, 1).alias(f"pos{i + 1}") for i in range(5)
+    )
+
+    # Unpivot from wide to long format
+    long = df.drop("word").unpivot(variable_name="position", value_name="letter")
+
+    # Group by letter and position, count occurrences
+    counts = long.group_by(["letter", "position"]).len()
+
+    # Pivot to get letter × position matrix
+    matrix = counts.pivot(on="position", index="letter", values="len").sort("letter")
+
+    # Fill nulls with 0 and build result dict
+    result: dict[str, list[int]] = {}
+    for row in matrix.iter_rows(named=True):
+        letter = row["letter"]
+        result[letter] = [row.get(f"pos{i + 1}", 0) or 0 for i in range(5)]
+
+    return result
+
+
 def generate_frequency_table_html(freq: pl.DataFrame, word_count: int) -> str:
     """Generate an HTML frequency table with bar visualisation."""
     max_count = freq["len"].max()
@@ -68,6 +99,7 @@ def generate_page(words: list[str], freq: pl.DataFrame) -> str:
     """Generate the full docs/index.md content."""
     word_count = len(words)
     table_html = generate_frequency_table_html(freq, word_count)
+    unigrams = compute_positional_unigrams(words)
 
     return (
         "---\n"
