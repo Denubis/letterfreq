@@ -286,19 +286,28 @@ def generate_bigram_html(bigrams: dict[str, dict[str, dict[str, int]]]) -> str:
         # Per-column normalisation
         col_max = _grid_col_maxes(pair_data, letters)
 
+        pos_b = i + 2
         rows: list[str] = []
         for first in letters:
             cells: list[str] = []
             for second in letters:
                 count = pair_data.get(first, {}).get(second, 0)
-                cells.append(_heatmap_td(count, col_max[second]))
+                intensity = count / col_max[second] if col_max[second] else 0
+                if count == 0:
+                    cells.append('<td class="bigram-cell" data-value="0" style="--heat: 0"></td>')
+                else:
+                    cells.append(
+                        f'<td class="bigram-cell" data-value="{count}"'
+                        f' data-row="{first}" data-col-letter="{second}"'
+                        f' data-row-pos="{pos_a}" data-col-pos="{pos_b}"'
+                        f' style="--heat: {intensity:.3f}">{count:,}</td>'
+                    )
             rows.append(
                 f'  <tr><td class="row-label bigram-row" '
                 f'data-letter="{first}" data-pos="{pos_a}">'
                 f'{first}</td>{"".join(cells)}</tr>'
             )
 
-        pos_b = i + 2
         header_cells = "".join(
             f'<th class="sortable bigram-col" data-col="{idx + 1}"'
             f' data-letter="{ch}" data-pos="{pos_b}">{ch}</th>'

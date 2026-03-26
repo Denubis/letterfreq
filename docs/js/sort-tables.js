@@ -159,5 +159,69 @@
       showBigramDrilldown(bigramRow, letter, pos);
       return;
     }
+
+    // Bigram cell click — show drill-downs for both row and column letters
+    var bigramCell = e.target.closest(".bigram-cell[data-row]");
+    if (bigramCell) {
+      var rowLetter = bigramCell.getAttribute("data-row");
+      var colLetter = bigramCell.getAttribute("data-col-letter");
+      var rowPos = parseInt(bigramCell.getAttribute("data-row-pos"), 10);
+      var colPos = parseInt(bigramCell.getAttribute("data-col-pos"), 10);
+      var count = bigramCell.getAttribute("data-value");
+      var grid = bigramCell.closest(".bigram-grid");
+      if (!grid) return;
+      var expansionDiv = document.getElementById("expand-" + grid.id);
+      if (!expansionDiv) return;
+
+      // Toggle off
+      if (activeBigramElement === bigramCell) {
+        expansionDiv.classList.remove("active");
+        expansionDiv.innerHTML = "";
+        activeBigramElement = null;
+        return;
+      }
+
+      document.querySelectorAll(".bigram-expansion.active").forEach(function (d) {
+        d.classList.remove("active");
+        d.innerHTML = "";
+      });
+
+      loadBigramData().then(function (data) {
+        var parts = [];
+        var pair = rowLetter + colLetter;
+        parts.push("<h4>" + pair + ": " + count + " words</h4>");
+
+        // What precedes rowLetter (_X drill-down)
+        if (rowPos > 1) {
+          var leftKey = (rowPos - 1) + "_" + rowPos;
+          var leftData = data[leftKey] || {};
+          var leftDist = {};
+          Object.keys(leftData).forEach(function (first) {
+            var c = leftData[first][rowLetter];
+            if (c) leftDist[first] = c;
+          });
+          if (Object.keys(leftDist).length > 0) {
+            parts.push(buildBarChart(leftDist, "What precedes " + rowLetter + " (pos " + (rowPos - 1) + "\u2013" + rowPos + ")", rowLetter, "left"));
+          }
+        }
+
+        // What follows colLetter (X_ drill-down)
+        if (colPos < 5) {
+          var rightKey = colPos + "_" + (colPos + 1);
+          var rightDist = data[rightKey] ? (data[rightKey][colLetter] || {}) : {};
+          if (Object.keys(rightDist).length > 0) {
+            parts.push(buildBarChart(rightDist, "What follows " + colLetter + " (pos " + colPos + "\u2013" + (colPos + 1) + ")", colLetter, "right"));
+          }
+        }
+
+        expansionDiv.innerHTML = '<div class="neighbour-bars">' + parts.join("") + '</div>';
+        expansionDiv.classList.add("active");
+        activeBigramElement = bigramCell;
+      }).catch(function () {
+        expansionDiv.innerHTML = "<p>Failed to load bigram data.</p>";
+        expansionDiv.classList.add("active");
+      });
+      return;
+    }
   });
 })();
