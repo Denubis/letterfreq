@@ -76,8 +76,8 @@ Analysis of **4,667** five-letter words from `/usr/share/dict/words`.
 
 ## Positional Bigrams
 
-<details>
-<summary>Positions 1–2</summary>
+### Positions 1–2
+
 <table class="heatmap bigram-grid sortable-table" id="bigram-1_2" data-pair="1_2">
   <thead><tr><th class="sortable" data-col="0"></th><th class="sortable bigram-col" data-col="1" data-letter="a" data-pos="2">a</th><th class="sortable bigram-col" data-col="2" data-letter="b" data-pos="2">b</th><th class="sortable bigram-col" data-col="3" data-letter="c" data-pos="2">c</th><th class="sortable bigram-col" data-col="4" data-letter="d" data-pos="2">d</th><th class="sortable bigram-col" data-col="5" data-letter="e" data-pos="2">e</th><th class="sortable bigram-col" data-col="6" data-letter="f" data-pos="2">f</th><th class="sortable bigram-col" data-col="7" data-letter="g" data-pos="2">g</th><th class="sortable bigram-col" data-col="8" data-letter="h" data-pos="2">h</th><th class="sortable bigram-col" data-col="9" data-letter="i" data-pos="2">i</th><th class="sortable bigram-col" data-col="10" data-letter="j" data-pos="2">j</th><th class="sortable bigram-col" data-col="11" data-letter="k" data-pos="2">k</th><th class="sortable bigram-col" data-col="12" data-letter="l" data-pos="2">l</th><th class="sortable bigram-col" data-col="13" data-letter="m" data-pos="2">m</th><th class="sortable bigram-col" data-col="14" data-letter="n" data-pos="2">n</th><th class="sortable bigram-col" data-col="15" data-letter="o" data-pos="2">o</th><th class="sortable bigram-col" data-col="16" data-letter="p" data-pos="2">p</th><th class="sortable bigram-col" data-col="17" data-letter="q" data-pos="2">q</th><th class="sortable bigram-col" data-col="18" data-letter="r" data-pos="2">r</th><th class="sortable bigram-col" data-col="19" data-letter="s" data-pos="2">s</th><th class="sortable bigram-col" data-col="20" data-letter="t" data-pos="2">t</th><th class="sortable bigram-col" data-col="21" data-letter="u" data-pos="2">u</th><th class="sortable bigram-col" data-col="22" data-letter="v" data-pos="2">v</th><th class="sortable bigram-col" data-col="23" data-letter="w" data-pos="2">w</th><th class="sortable bigram-col" data-col="24" data-letter="x" data-pos="2">x</th><th class="sortable bigram-col" data-col="25" data-letter="y" data-pos="2">y</th><th class="sortable bigram-col" data-col="26" data-letter="z" data-pos="2">z</th></tr></thead>
   <tbody>
@@ -110,10 +110,10 @@ Analysis of **4,667** five-letter words from `/usr/share/dict/words`.
   </tbody>
 </table>
 <div class="bigram-expansion" id="expand-bigram-1_2"></div>
-</details>
 
-<details>
-<summary>Positions 2–3</summary>
+
+### Positions 2–3
+
 <table class="heatmap bigram-grid sortable-table" id="bigram-2_3" data-pair="2_3">
   <thead><tr><th class="sortable" data-col="0"></th><th class="sortable bigram-col" data-col="1" data-letter="a" data-pos="3">a</th><th class="sortable bigram-col" data-col="2" data-letter="b" data-pos="3">b</th><th class="sortable bigram-col" data-col="3" data-letter="c" data-pos="3">c</th><th class="sortable bigram-col" data-col="4" data-letter="d" data-pos="3">d</th><th class="sortable bigram-col" data-col="5" data-letter="e" data-pos="3">e</th><th class="sortable bigram-col" data-col="6" data-letter="f" data-pos="3">f</th><th class="sortable bigram-col" data-col="7" data-letter="g" data-pos="3">g</th><th class="sortable bigram-col" data-col="8" data-letter="h" data-pos="3">h</th><th class="sortable bigram-col" data-col="9" data-letter="i" data-pos="3">i</th><th class="sortable bigram-col" data-col="10" data-letter="j" data-pos="3">j</th><th class="sortable bigram-col" data-col="11" data-letter="k" data-pos="3">k</th><th class="sortable bigram-col" data-col="12" data-letter="l" data-pos="3">l</th><th class="sortable bigram-col" data-col="13" data-letter="m" data-pos="3">m</th><th class="sortable bigram-col" data-col="14" data-letter="n" data-pos="3">n</th><th class="sortable bigram-col" data-col="15" data-letter="o" data-pos="3">o</th><th class="sortable bigram-col" data-col="16" data-letter="p" data-pos="3">p</th><th class="sortable bigram-col" data-col="17" data-letter="q" data-pos="3">q</th><th class="sortable bigram-col" data-col="18" data-letter="r" data-pos="3">r</th><th class="sortable bigram-col" data-col="19" data-letter="s" data-pos="3">s</th><th class="sortable bigram-col" data-col="20" data-letter="t" data-pos="3">t</th><th class="sortable bigram-col" data-col="21" data-letter="u" data-pos="3">u</th><th class="sortable bigram-col" data-col="22" data-letter="v" data-pos="3">v</th><th class="sortable bigram-col" data-col="23" data-letter="w" data-pos="3">w</th><th class="sortable bigram-col" data-col="24" data-letter="x" data-pos="3">x</th><th class="sortable bigram-col" data-col="25" data-letter="y" data-pos="3">y</th><th class="sortable bigram-col" data-col="26" data-letter="z" data-pos="3">z</th></tr></thead>
   <tbody>
@@ -146,10 +146,10 @@ Analysis of **4,667** five-letter words from `/usr/share/dict/words`.
   </tbody>
 </table>
 <div class="bigram-expansion" id="expand-bigram-2_3"></div>
-</details>
 
-<details>
-<summary>Positions 3–4</summary>
+
+### Positions 3–4
+
 <table class="heatmap bigram-grid sortable-table" id="bigram-3_4" data-pair="3_4">
   <thead><tr><th class="sortable" data-col="0"></th><th class="sortable bigram-col" data-col="1" data-letter="a" data-pos="4">a</th><th class="sortable bigram-col" data-col="2" data-letter="b" data-pos="4">b</th><th class="sortable bigram-col" data-col="3" data-letter="c" data-pos="4">c</th><th class="sortable bigram-col" data-col="4" data-letter="d" data-pos="4">d</th><th class="sortable bigram-col" data-col="5" data-letter="e" data-pos="4">e</th><th class="sortable bigram-col" data-col="6" data-letter="f" data-pos="4">f</th><th class="sortable bigram-col" data-col="7" data-letter="g" data-pos="4">g</th><th class="sortable bigram-col" data-col="8" data-letter="h" data-pos="4">h</th><th class="sortable bigram-col" data-col="9" data-letter="i" data-pos="4">i</th><th class="sortable bigram-col" data-col="10" data-letter="j" data-pos="4">j</th><th class="sortable bigram-col" data-col="11" data-letter="k" data-pos="4">k</th><th class="sortable bigram-col" data-col="12" data-letter="l" data-pos="4">l</th><th class="sortable bigram-col" data-col="13" data-letter="m" data-pos="4">m</th><th class="sortable bigram-col" data-col="14" data-letter="n" data-pos="4">n</th><th class="sortable bigram-col" data-col="15" data-letter="o" data-pos="4">o</th><th class="sortable bigram-col" data-col="16" data-letter="p" data-pos="4">p</th><th class="sortable bigram-col" data-col="17" data-letter="q" data-pos="4">q</th><th class="sortable bigram-col" data-col="18" data-letter="r" data-pos="4">r</th><th class="sortable bigram-col" data-col="19" data-letter="s" data-pos="4">s</th><th class="sortable bigram-col" data-col="20" data-letter="t" data-pos="4">t</th><th class="sortable bigram-col" data-col="21" data-letter="u" data-pos="4">u</th><th class="sortable bigram-col" data-col="22" data-letter="v" data-pos="4">v</th><th class="sortable bigram-col" data-col="23" data-letter="w" data-pos="4">w</th><th class="sortable bigram-col" data-col="24" data-letter="x" data-pos="4">x</th><th class="sortable bigram-col" data-col="25" data-letter="y" data-pos="4">y</th><th class="sortable bigram-col" data-col="26" data-letter="z" data-pos="4">z</th></tr></thead>
   <tbody>
@@ -182,10 +182,10 @@ Analysis of **4,667** five-letter words from `/usr/share/dict/words`.
   </tbody>
 </table>
 <div class="bigram-expansion" id="expand-bigram-3_4"></div>
-</details>
 
-<details>
-<summary>Positions 4–5</summary>
+
+### Positions 4–5
+
 <table class="heatmap bigram-grid sortable-table" id="bigram-4_5" data-pair="4_5">
   <thead><tr><th class="sortable" data-col="0"></th><th class="sortable bigram-col" data-col="1" data-letter="a" data-pos="5">a</th><th class="sortable bigram-col" data-col="2" data-letter="b" data-pos="5">b</th><th class="sortable bigram-col" data-col="3" data-letter="c" data-pos="5">c</th><th class="sortable bigram-col" data-col="4" data-letter="d" data-pos="5">d</th><th class="sortable bigram-col" data-col="5" data-letter="e" data-pos="5">e</th><th class="sortable bigram-col" data-col="6" data-letter="f" data-pos="5">f</th><th class="sortable bigram-col" data-col="7" data-letter="g" data-pos="5">g</th><th class="sortable bigram-col" data-col="8" data-letter="h" data-pos="5">h</th><th class="sortable bigram-col" data-col="9" data-letter="i" data-pos="5">i</th><th class="sortable bigram-col" data-col="10" data-letter="j" data-pos="5">j</th><th class="sortable bigram-col" data-col="11" data-letter="k" data-pos="5">k</th><th class="sortable bigram-col" data-col="12" data-letter="l" data-pos="5">l</th><th class="sortable bigram-col" data-col="13" data-letter="m" data-pos="5">m</th><th class="sortable bigram-col" data-col="14" data-letter="n" data-pos="5">n</th><th class="sortable bigram-col" data-col="15" data-letter="o" data-pos="5">o</th><th class="sortable bigram-col" data-col="16" data-letter="p" data-pos="5">p</th><th class="sortable bigram-col" data-col="17" data-letter="q" data-pos="5">q</th><th class="sortable bigram-col" data-col="18" data-letter="r" data-pos="5">r</th><th class="sortable bigram-col" data-col="19" data-letter="s" data-pos="5">s</th><th class="sortable bigram-col" data-col="20" data-letter="t" data-pos="5">t</th><th class="sortable bigram-col" data-col="21" data-letter="u" data-pos="5">u</th><th class="sortable bigram-col" data-col="22" data-letter="v" data-pos="5">v</th><th class="sortable bigram-col" data-col="23" data-letter="w" data-pos="5">w</th><th class="sortable bigram-col" data-col="24" data-letter="x" data-pos="5">x</th><th class="sortable bigram-col" data-col="25" data-letter="y" data-pos="5">y</th><th class="sortable bigram-col" data-col="26" data-letter="z" data-pos="5">z</th></tr></thead>
   <tbody>
@@ -218,7 +218,7 @@ Analysis of **4,667** five-letter words from `/usr/share/dict/words`.
   </tbody>
 </table>
 <div class="bigram-expansion" id="expand-bigram-4_5"></div>
-</details>
+
 
 ## Positional Trigrams
 

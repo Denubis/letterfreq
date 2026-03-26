@@ -318,10 +318,8 @@ def generate_bigram_html(bigrams: dict[str, dict[str, dict[str, int]]]) -> str:
         )
 
         sections.append(
-            f"<details>\n"
-            f"<summary>Positions {i + 1}\u2013{i + 2}</summary>\n"
+            f"### Positions {i + 1}\u2013{i + 2}\n\n"
             f"{table}\n"
-            f"</details>"
         )
 
     return "\n\n".join(sections)
