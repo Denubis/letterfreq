@@ -1,0 +1,214 @@
+/* Base styles for frequency tables and heatmap visualisations */
+
+.freq-table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+}
+
+.freq-table td,
+.freq-table th {
+  padding: 0.35em 0.5em;
+  border: 1px solid var(--md-default-fg-color--lightest, #e0e0e0);
+  text-align: center;
+}
+
+.freq-table th {
+  font-weight: 600;
+}
+
+.freq-bar {
+  min-width: 200px;
+}
+
+/* Heatmap tables (unigram, bigram, trigram) */
+
+.heatmap {
+  border-collapse: collapse;
+  margin: 1em 0;
+}
+
+.heatmap td,
+.heatmap th {
+  padding: 0.3em 0.5em;
+  border: 1px solid var(--md-default-fg-color--lightest, #e0e0e0);
+  text-align: center;
+  min-width: 2.5em;
+}
+
+.heatmap th {
+  font-weight: 600;
+}
+
+.heatmap .row-label {
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* Heatmap colour scale — per-column normalised, works in light and dark mode */
+.heatmap td[style*="--heat"] {
+  background-color: hsl(0 75% calc(97% - var(--heat) * 45%));
+  color: hsl(0 0% calc(100% - var(--heat) * 80%));
+}
+
+[data-md-color-scheme="slate"] .heatmap td[style*="--heat"] {
+  background-color: hsl(0 60% calc(15% + var(--heat) * 35%));
+  color: hsl(0 0% calc(70% + var(--heat) * 25%));
+}
+
+/* Sortable column headers */
+.sortable {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+}
+
+.sortable::after {
+  content: " \25C6";
+  font-size: 0.6em;
+  opacity: 0.3;
+}
+
+.sortable.sort-asc::after {
+  content: " \25B2";
+  opacity: 0.8;
+}
+
+.sortable.sort-desc::after {
+  content: " \25BC";
+  opacity: 0.8;
+}
+
+/* Compact grids (bigram + trigram) */
+.bigram-grid,
+.trigram-grid {
+  font-size: 0.75em;
+}
+
+.bigram-grid td,
+.bigram-grid th,
+.trigram-grid td,
+.trigram-grid th {
+  min-width: 1.8em;
+  padding: 0.15em 0.25em;
+}
+
+/* Bigram row labels and cells are clickable for drill-down */
+.bigram-row,
+.bigram-cell[data-row] {
+  cursor: pointer;
+}
+
+.bigram-row:hover {
+  background-color: var(--md-accent-fg-color, #526cfe) !important;
+  color: white !important;
+}
+
+/* Global details styling — shared by bigram and trigram collapsible sections */
+details summary {
+  cursor: pointer;
+  padding: 0.5em 0;
+  font-weight: 600;
+}
+
+details {
+  margin: 0.5em 0;
+}
+
+/* Expansion panels (bigram drill-down + trigram completions) */
+.bigram-expansion,
+.trigram-expansion {
+  display: none;
+  margin: 0.5em 0;
+  padding: 0.75em;
+  border: 1px solid var(--md-default-fg-color--lightest, #e0e0e0);
+  border-radius: 4px;
+}
+
+.bigram-expansion.active,
+.trigram-expansion.active {
+  display: block;
+}
+
+/* Neighbour bar charts (bigram drill-down) */
+.neighbour-bars {
+  text-align: left;
+}
+
+.neighbour-bars h4 {
+  margin: 0.5em 0 0.25em;
+  font-size: 0.95em;
+}
+
+.bar-row {
+  display: flex;
+  align-items: center;
+  margin: 0.15em 0;
+}
+
+.bar-label {
+  width: 2.5em;
+  text-align: right;
+  margin-right: 0.5em;
+  font-weight: 600;
+}
+
+.bar {
+  height: 1em;
+  background-color: var(--md-primary-fg-color, #4051b5);
+  border-radius: 2px;
+  min-width: 2px;
+  max-width: 300px;
+}
+
+.bar-count {
+  margin-left: 0.5em;
+  color: var(--md-default-fg-color--light, #666);
+}
+
+/* Trigram cells */
+.trigram-cell {
+  cursor: pointer;
+}
+
+.trigram-cell.empty {
+  cursor: default;
+  opacity: 0.3;
+}
+
+/* Completion list (trigram click-to-expand) */
+.completion-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12em, 1fr));
+  gap: 0.3em 1em;
+}
+
+.completion-item {
+  display: grid;
+  grid-template-columns: 3em 1fr auto auto;
+  align-items: center;
+  gap: 0.5em;
+  font-size: 0.9em;
+}
+
+.completion-letter {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.completion-bar {
+  height: 0.7em;
+  background-color: var(--md-primary-fg-color, #4051b5);
+  border-radius: 2px;
+  min-width: 1px;
+}
+
+.completion-count {
+  color: var(--md-default-fg-color--light, #666);
+  font-size: 0.85em;
+}
+
+.completion-pct {
+  color: var(--md-default-fg-color--light, #666);
+  font-size: 0.8em;
+}
