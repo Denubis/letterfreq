@@ -64,19 +64,23 @@
         .then(function (d) { bigramData = d; return d; });
     }
 
-    function buildBarChart(distribution, label) {
+    function buildBarChart(distribution, heading, mainLetter, direction) {
+      // direction: "left" means neighbour is before mainLetter, "right" means after
       var sorted = Object.entries(distribution).sort(function (a, b) {
         return b[1] - a[1];
       });
       if (sorted.length === 0) return "";
 
       var max = sorted[0][1];
-      var html = '<h4>' + label + '</h4>';
+      var html = '<h4>' + heading + '</h4>';
       sorted.forEach(function (entry) {
-        var letter = entry[0], count = entry[1];
+        var nbLetter = entry[0], count = entry[1];
+        var pair = direction === "left"
+          ? nbLetter + mainLetter
+          : mainLetter + nbLetter;
         var width = ((count / max) * 100).toFixed(1);
         html += '<div class="bar-row">'
-          + '<span class="bar-label">' + letter + '</span>'
+          + '<span class="bar-label">' + pair + '</span>'
           + '<span class="bar" style="width: ' + width + '%"></span>'
           + '<span class="bar-count">' + count + '</span>'
           + '</div>';
@@ -123,7 +127,7 @@
               if (count) leftDist[first] = count;
             });
             if (Object.keys(leftDist).length > 0) {
-              parts.push(buildBarChart(leftDist, "Position " + (pos - 1) + " \u2192 " + letter));
+              parts.push(buildBarChart(leftDist, "What precedes " + letter + " (pos " + (pos - 1) + "\u2013" + pos + ")", letter, "left"));
             }
           }
 
@@ -132,7 +136,7 @@
             var rightKey = pos + "_" + (pos + 1);
             var rightDist = data[rightKey] ? (data[rightKey][letter] || {}) : {};
             if (Object.keys(rightDist).length > 0) {
-              parts.push(buildBarChart(rightDist, letter + " \u2192 Position " + (pos + 1)));
+              parts.push(buildBarChart(rightDist, "What follows " + letter + " (pos " + pos + "\u2013" + (pos + 1) + ")", letter, "right"));
             }
           }
 
