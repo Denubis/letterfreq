@@ -32,7 +32,7 @@
     });
   }
 
-  document.addEventListener("DOMContentLoaded", function () {
+  function init() {
     document.querySelectorAll(".sortable-table .sortable").forEach(function (th) {
       th.style.cursor = "pointer";
       th.addEventListener("click", function () {
@@ -149,5 +149,11 @@
         });
       });
     });
-  });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
 })();

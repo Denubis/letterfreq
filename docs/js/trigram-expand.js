@@ -35,7 +35,7 @@
 
   let activeCell = null;
 
-  document.addEventListener("DOMContentLoaded", function() {
+  function init() {
     document.querySelectorAll(".trigram-cell:not(.empty)").forEach(function(cell) {
       cell.addEventListener("click", async function() {
         const grid = this.closest(".trigram-grid").dataset.grid;
@@ -74,5 +74,11 @@
         activeCell = this;
       });
     });
-  });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
 })();
