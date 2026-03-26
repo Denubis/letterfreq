@@ -13,13 +13,11 @@
       var valA = cellA ? cellA.getAttribute("data-value") : "";
       var valB = cellB ? cellB.getAttribute("data-value") : "";
 
-      // Numeric if both parse
       var numA = parseFloat(valA);
       var numB = parseFloat(valB);
       if (!isNaN(numA) && !isNaN(numB)) {
         return ascending ? numA - numB : numB - numA;
       }
-      // Fall back to text (letters)
       var textA = (cellA ? cellA.textContent : "").trim();
       var textB = (cellB ? cellB.textContent : "").trim();
       return ascending
@@ -32,146 +30,134 @@
     });
   }
 
-  function init() {
-    document.querySelectorAll(".sortable-table .sortable").forEach(function (th) {
-      th.style.cursor = "pointer";
-      th.addEventListener("click", function () {
-        var table = this.closest("table");
-        var colIdx = parseInt(this.getAttribute("data-col"), 10);
-        var wasAsc = this.getAttribute("data-sort-dir") === "asc";
-        var ascending = !wasAsc;
+  /* --- Bigram drill-down --- */
 
-        // Clear sort indicators on siblings
-        table.querySelectorAll("thead .sortable").forEach(function (h) {
-          h.removeAttribute("data-sort-dir");
-          h.classList.remove("sort-asc", "sort-desc");
-        });
+  var bigramData = null;
 
-        this.setAttribute("data-sort-dir", ascending ? "asc" : "desc");
-        this.classList.add(ascending ? "sort-asc" : "sort-desc");
-        sortTable(table, colIdx, ascending);
-      });
+  function loadBigramData() {
+    if (bigramData) return Promise.resolve(bigramData);
+    return fetch("data/bigrams.json")
+      .then(function (r) { return r.json(); })
+      .then(function (d) { bigramData = d; return d; });
+  }
+
+  function buildBarChart(distribution, heading, mainLetter, direction) {
+    var sorted = Object.entries(distribution).sort(function (a, b) {
+      return b[1] - a[1];
+    });
+    if (sorted.length === 0) return "";
+
+    var max = sorted[0][1];
+    var html = '<h4>' + heading + '</h4>';
+    sorted.forEach(function (entry) {
+      var nbLetter = entry[0], count = entry[1];
+      var pair = direction === "left"
+        ? nbLetter + mainLetter
+        : mainLetter + nbLetter;
+      var width = ((count / max) * 100).toFixed(1);
+      html += '<div class="bar-row">'
+        + '<span class="bar-label">' + pair + '</span>'
+        + '<span class="bar" style="width: ' + width + '%"></span>'
+        + '<span class="bar-count">' + count + '</span>'
+        + '</div>';
+    });
+    return html;
+  }
+
+  var activeBigramElement = null;
+
+  function showBigramDrilldown(element, letter, pos) {
+    var grid = element.closest(".bigram-grid");
+    if (!grid) return;
+    var expansionDiv = document.getElementById("expand-" + grid.id);
+    if (!expansionDiv) return;
+
+    if (activeBigramElement === element) {
+      expansionDiv.classList.remove("active");
+      expansionDiv.innerHTML = "";
+      activeBigramElement = null;
+      return;
+    }
+
+    document.querySelectorAll(".bigram-expansion.active").forEach(function (d) {
+      d.classList.remove("active");
+      d.innerHTML = "";
     });
 
-    /* --- Bigram row click → drill-down expansion --- */
+    loadBigramData().then(function (data) {
+      var parts = [];
 
-    var bigramData = null;
-
-    function loadBigramData() {
-      if (bigramData) return Promise.resolve(bigramData);
-      return fetch("data/bigrams.json")
-        .then(function (r) { return r.json(); })
-        .then(function (d) { bigramData = d; return d; });
-    }
-
-    function buildBarChart(distribution, heading, mainLetter, direction) {
-      // direction: "left" means neighbour is before mainLetter, "right" means after
-      var sorted = Object.entries(distribution).sort(function (a, b) {
-        return b[1] - a[1];
-      });
-      if (sorted.length === 0) return "";
-
-      var max = sorted[0][1];
-      var html = '<h4>' + heading + '</h4>';
-      sorted.forEach(function (entry) {
-        var nbLetter = entry[0], count = entry[1];
-        var pair = direction === "left"
-          ? nbLetter + mainLetter
-          : mainLetter + nbLetter;
-        var width = ((count / max) * 100).toFixed(1);
-        html += '<div class="bar-row">'
-          + '<span class="bar-label">' + pair + '</span>'
-          + '<span class="bar" style="width: ' + width + '%"></span>'
-          + '<span class="bar-count">' + count + '</span>'
-          + '</div>';
-      });
-      return html;
-    }
-
-    var activeBigramElement = null;
-
-    function showBigramDrilldown(element, letter, pos) {
-      var grid = element.closest(".bigram-grid");
-      var expansionDiv = document.getElementById("expand-" + grid.id);
-
-      if (!expansionDiv) return;
-
-      // Toggle off
-      if (activeBigramElement === element) {
-        expansionDiv.classList.remove("active");
-        expansionDiv.innerHTML = "";
-        activeBigramElement = null;
-        return;
+      if (pos > 1) {
+        var leftKey = (pos - 1) + "_" + pos;
+        var leftData = data[leftKey] || {};
+        var leftDist = {};
+        Object.keys(leftData).forEach(function (first) {
+          var count = leftData[first][letter];
+          if (count) leftDist[first] = count;
+        });
+        if (Object.keys(leftDist).length > 0) {
+          parts.push(buildBarChart(leftDist, "What precedes " + letter + " (pos " + (pos - 1) + "\u2013" + pos + ")", letter, "left"));
+        }
       }
 
-      // Close any other open bigram expansion
-      document.querySelectorAll(".bigram-expansion.active").forEach(function (d) {
-        d.classList.remove("active");
-        d.innerHTML = "";
+      if (pos < 5) {
+        var rightKey = pos + "_" + (pos + 1);
+        var rightDist = data[rightKey] ? (data[rightKey][letter] || {}) : {};
+        if (Object.keys(rightDist).length > 0) {
+          parts.push(buildBarChart(rightDist, "What follows " + letter + " (pos " + pos + "\u2013" + (pos + 1) + ")", letter, "right"));
+        }
+      }
+
+      if (parts.length === 0) {
+        expansionDiv.innerHTML = "<p>No neighbour data for this letter.</p>";
+      } else {
+        expansionDiv.innerHTML = '<div class="neighbour-bars">' + parts.join("") + '</div>';
+      }
+      expansionDiv.classList.add("active");
+      activeBigramElement = element;
+    }).catch(function () {
+      expansionDiv.innerHTML = "<p>Failed to load bigram data.</p>";
+      expansionDiv.classList.add("active");
+    });
+  }
+
+  /* --- Single delegated click handler for everything --- */
+
+  document.addEventListener("click", function (e) {
+    // Sortable column header
+    var sortTh = e.target.closest(".sortable-table .sortable");
+    if (sortTh) {
+      var table = sortTh.closest("table");
+      var colIdx = parseInt(sortTh.getAttribute("data-col"), 10);
+      var wasAsc = sortTh.getAttribute("data-sort-dir") === "asc";
+      var ascending = !wasAsc;
+
+      table.querySelectorAll("thead .sortable").forEach(function (h) {
+        h.removeAttribute("data-sort-dir");
+        h.classList.remove("sort-asc", "sort-desc");
       });
 
-      loadBigramData().then(function (data) {
-        var parts = [];
-
-        // Left neighbour: what precedes this letter
-        if (pos > 1) {
-          var leftKey = (pos - 1) + "_" + pos;
-          var leftData = data[leftKey] || {};
-          var leftDist = {};
-          Object.keys(leftData).forEach(function (first) {
-            var count = leftData[first][letter];
-            if (count) leftDist[first] = count;
-          });
-          if (Object.keys(leftDist).length > 0) {
-            parts.push(buildBarChart(leftDist, "What precedes " + letter + " (pos " + (pos - 1) + "\u2013" + pos + ")", letter, "left"));
-          }
-        }
-
-        // Right neighbour: what follows this letter
-        if (pos < 5) {
-          var rightKey = pos + "_" + (pos + 1);
-          var rightDist = data[rightKey] ? (data[rightKey][letter] || {}) : {};
-          if (Object.keys(rightDist).length > 0) {
-            parts.push(buildBarChart(rightDist, "What follows " + letter + " (pos " + pos + "\u2013" + (pos + 1) + ")", letter, "right"));
-          }
-        }
-
-        if (parts.length === 0) {
-          expansionDiv.innerHTML = "<p>No neighbour data for this letter.</p>";
-        } else {
-          expansionDiv.innerHTML = '<div class="neighbour-bars">' + parts.join("") + '</div>';
-        }
-        expansionDiv.classList.add("active");
-        activeBigramElement = element;
-      }).catch(function () {
-        expansionDiv.innerHTML = "<p>Failed to load bigram data.</p>";
-        expansionDiv.classList.add("active");
-      });
+      sortTh.setAttribute("data-sort-dir", ascending ? "asc" : "desc");
+      sortTh.classList.add(ascending ? "sort-asc" : "sort-desc");
+      sortTable(table, colIdx, ascending);
     }
 
-    // Row labels: click to drill down on the row letter (first position in pair)
-    document.querySelectorAll(".bigram-row").forEach(function (cell) {
-      cell.addEventListener("click", function () {
-        var letter = this.getAttribute("data-letter");
-        var pos = parseInt(this.getAttribute("data-pos"), 10);
-        showBigramDrilldown(this, letter, pos);
-      });
-    });
+    // Bigram column header drill-down
+    var bigramCol = e.target.closest(".bigram-col");
+    if (bigramCol) {
+      var letter = bigramCol.getAttribute("data-letter");
+      var pos = parseInt(bigramCol.getAttribute("data-pos"), 10);
+      showBigramDrilldown(bigramCol, letter, pos);
+      return;
+    }
 
-    // Column headers: click to drill down on the column letter (second position in pair)
-    // Sort also fires (both are useful simultaneously)
-    document.querySelectorAll(".bigram-col").forEach(function (th) {
-      th.addEventListener("click", function () {
-        var letter = this.getAttribute("data-letter");
-        var pos = parseInt(this.getAttribute("data-pos"), 10);
-        showBigramDrilldown(this, letter, pos);
-      });
-    });
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
-    init();
-  }
+    // Bigram row label drill-down
+    var bigramRow = e.target.closest(".bigram-row");
+    if (bigramRow) {
+      var letter = bigramRow.getAttribute("data-letter");
+      var pos = parseInt(bigramRow.getAttribute("data-pos"), 10);
+      showBigramDrilldown(bigramRow, letter, pos);
+      return;
+    }
+  });
 })();

@@ -35,50 +35,47 @@
 
   let activeCell = null;
 
-  function init() {
-    document.querySelectorAll(".trigram-cell:not(.empty)").forEach(function(cell) {
-      cell.addEventListener("click", async function() {
-        const grid = this.closest(".trigram-grid").dataset.grid;
-        const known1 = this.dataset.known1;
-        const known2 = this.dataset.known2;
-        const expansionDiv = document.getElementById("expand-" + grid);
+  // Event delegation — survives Zensical instant navigation DOM swaps
+  document.addEventListener("click", async function(e) {
+    var cell = e.target.closest(".trigram-cell:not(.empty)");
+    if (!cell) return;
 
-        if (!expansionDiv) return;
+    var gridEl = cell.closest(".trigram-grid");
+    if (!gridEl) return;
 
-        // Toggle off if clicking same cell
-        if (activeCell === this) {
-          expansionDiv.classList.remove("active");
-          expansionDiv.innerHTML = "";
-          activeCell = null;
-          return;
-        }
+    var grid = gridEl.dataset.grid;
+    var known1 = cell.dataset.known1;
+    var known2 = cell.dataset.known2;
+    var expansionDiv = document.getElementById("expand-" + grid);
 
-        // Close any previously active expansion (may be in a different grid)
-        document.querySelectorAll(".trigram-expansion.active").forEach(function(div) {
-          div.classList.remove("active");
-          div.innerHTML = "";
-        });
+    if (!expansionDiv) return;
 
-        let data;
-        try {
-          data = await loadTrigramData();
-        } catch (e) {
-          expansionDiv.innerHTML = '<p>Failed to load trigram data.</p>';
-          expansionDiv.classList.add("active");
-          return;
-        }
-        const completions = data[grid]?.[known1]?.[known2];
+    // Toggle off if clicking same cell
+    if (activeCell === cell) {
+      expansionDiv.classList.remove("active");
+      expansionDiv.innerHTML = "";
+      activeCell = null;
+      return;
+    }
 
-        expansionDiv.innerHTML = buildCompletionHTML(completions);
-        expansionDiv.classList.add("active");
-        activeCell = this;
-      });
+    // Close any previously active expansion
+    document.querySelectorAll(".trigram-expansion.active").forEach(function(div) {
+      div.classList.remove("active");
+      div.innerHTML = "";
     });
-  }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
-    init();
-  }
+    let data;
+    try {
+      data = await loadTrigramData();
+    } catch (err) {
+      expansionDiv.innerHTML = '<p>Failed to load trigram data.</p>';
+      expansionDiv.classList.add("active");
+      return;
+    }
+    var completions = data[grid]?.[known1]?.[known2];
+
+    expansionDiv.innerHTML = buildCompletionHTML(completions);
+    expansionDiv.classList.add("active");
+    activeCell = cell;
+  });
 })();
