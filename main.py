@@ -3,23 +3,20 @@
 from __future__ import annotations
 
 import json
-import re
 import string
 from pathlib import Path
 
 import polars as pl
 
-WORD_FILE = Path("/usr/share/dict/words")
+WORD_FILE = Path(__file__).parent / "data" / "words.txt"
 DOCS_DIR = Path(__file__).parent / "docs"
 DATA_DIR = DOCS_DIR / "data"
 INDEX_MD = DOCS_DIR / "index.md"
 
 
 def load_words(path: Path = WORD_FILE) -> list[str]:
-    """Read word list and return only lowercase five-letter words."""
-    pattern = re.compile(r"^[a-z]{5}$")
-    text = path.read_text()
-    return [w for w in text.splitlines() if pattern.match(w)]
+    """Read pre-filtered five-letter word list (one word per line, lowercase)."""
+    return [w for w in path.read_text().splitlines() if w]
 
 
 def compute_overall_frequencies(words: list[str]) -> pl.DataFrame:
@@ -428,8 +425,9 @@ def generate_page(
         "icon: null\n"
         "---\n\n"
         "# Five-Letter Word Frequencies\n\n"
-        f"Analysis of **{word_count:,}** five-letter words "
-        f"from `/usr/share/dict/words`.\n\n"
+        f"Analysis of **{word_count:,}** five-letter words from the "
+        "[dwyl/english-words](https://github.com/dwyl/english-words) "
+        "corpus (Unlicense).\n\n"
         "## Overall Letter Frequencies\n\n"
         f"{table_html}\n\n"
         "## Positional Unigrams\n\n"
