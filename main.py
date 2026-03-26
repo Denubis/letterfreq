@@ -298,8 +298,10 @@ def generate_bigram_html(bigrams: dict[str, dict[str, dict[str, int]]]) -> str:
                 f'{first}</td>{"".join(cells)}</tr>'
             )
 
+        pos_b = i + 2
         header_cells = "".join(
-            f'<th class="sortable" data-col="{idx + 1}">{ch}</th>'
+            f'<th class="sortable bigram-col" data-col="{idx + 1}"'
+            f' data-letter="{ch}" data-pos="{pos_b}">{ch}</th>'
             for idx, ch in enumerate(letters)
         )
         header = f'  <thead><tr><th class="sortable" data-col="0"></th>{header_cells}</tr></thead>'
