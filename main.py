@@ -1,4 +1,4 @@
-"""Compute overall letter frequencies from five-letter English words and generate docs/index.md."""
+"""Compute letter frequencies from five-letter English words and generate docs/index.md."""
 
 from __future__ import annotations
 
@@ -44,28 +44,18 @@ def compute_positional_unigrams(words: list[str]) -> dict[str, list[int]]:
     {letter: [pos1_count, pos2_count, pos3_count, pos4_count, pos5_count]}
     """
     df = pl.DataFrame({"word": words})
-
-    # Extract each position as a separate column
     df = df.with_columns(
         pl.col("word").str.slice(i, 1).alias(f"pos{i + 1}") for i in range(5)
     )
-
-    # Unpivot from wide to long format
     long = df.drop("word").unpivot(variable_name="position", value_name="letter")
-
-    # Group by letter and position, count occurrences
     counts = long.group_by(["letter", "position"]).len()
-
-    # Pivot to get letter × position matrix
     matrix = counts.pivot(on="position", index="letter", values="len").sort("letter")
 
-    # Fill nulls with 0 and build result dict
     result: dict[str, list[int]] = {}
     for row in matrix.iter_rows(named=True):
         letter = row["letter"]
         result[letter] = [row.get(f"pos{i + 1}", 0) or 0 for i in range(5)]
 
-    # Ensure all 26 letters are present (rare letters may not appear at all positions)
     for letter in string.ascii_lowercase:
         result.setdefault(letter, [0, 0, 0, 0, 0])
 
@@ -110,32 +100,20 @@ def compute_trigrams(
 ) -> tuple[dict[str, dict[str, dict[str, dict[str, int]]]], dict[str, dict[str, dict[str, int]]]]:
     """Compute trigram gap frequencies for 3 gap positions x 3 word windows.
 
-    Windows: positions 1-2-3, 2-3-4, 3-4-5 (1-indexed).
-    Gap positions: 1st, 2nd, 3rd letter in trigram.
-
-    known1 = lower-indexed word position, known2 = higher-indexed.
-
     Returns (detail, summary) where:
     - detail: {grid_name: {known1: {known2: {gap_letter: count}}}}
     - summary: {grid_name: {known1: {known2: total_count}}}
     """
-    # Define the 9 grids: (grid_name, gap_word_pos, known1_word_pos, known2_word_pos)
-    # All positions are 0-indexed into the word
-    windows = [(0, 1, 2), (1, 2, 3), (2, 3, 4)]  # win123, win234, win345
+    windows = [(0, 1, 2), (1, 2, 3), (2, 3, 4)]
     window_names = ["win123", "win234", "win345"]
 
     grids: list[tuple[str, int, int, int]] = []
     for win_name, (p1, p2, p3) in zip(window_names, windows, strict=True):
-        # gap1: gap at p1, known at p2 (known1), p3 (known2)
         grids.append((f"gap1_{win_name}", p1, p2, p3))
-        # gap2: gap at p2, known at p1 (known1), p3 (known2)
         grids.append((f"gap2_{win_name}", p2, p1, p3))
-        # gap3: gap at p3, known at p1 (known1), p2 (known2)
         grids.append((f"gap3_{win_name}", p3, p1, p2))
 
     df = pl.DataFrame({"word": words})
-
-    # Pre-extract all 5 positions
     df = df.with_columns(
         pl.col("word").str.slice(i, 1).alias(f"p{i}") for i in range(5)
     )
@@ -176,20 +154,9 @@ def compute_trigrams(
 def get_neighbour_distributions(
     bigrams: dict[str, dict[str, dict[str, int]]], letter: str, position: int
 ) -> dict[str, dict[str, int]]:
-    """Return neighbour frequency distributions for a letter at a given position.
-
-    For position 1: only right neighbour (from "1_2" grid, row slice).
-    For position 5: only left neighbour (from "4_5" grid, column slice).
-    For positions 2-4: both left and right.
-
-    Left neighbour: from the (position-1)_(position) grid, column slice —
-        all first_letters paired with this letter as second_letter.
-    Right neighbour: from the (position)_(position+1) grid, row slice —
-        this letter's row.
-    """
+    """Return neighbour frequency distributions for a letter at a given position."""
     result: dict[str, dict[str, int]] = {}
 
-    # Left neighbour: letters at position-1 that precede this letter at position
     if position > 1:
         pair_key = f"{position - 1}_{position}"
         pair_data = bigrams[pair_key]
@@ -200,7 +167,6 @@ def get_neighbour_distributions(
                 left[first_letter] = count
         result["left"] = left
 
-    # Right neighbour: letters at position+1 that follow this letter at position
     if position < 5:
         pair_key = f"{position}_{position + 1}"
         pair_data = bigrams[pair_key]
@@ -210,8 +176,37 @@ def get_neighbour_distributions(
     return result
 
 
+# --- HTML generation ---
+
+
+def _col_maxes(data: dict[str, list[int]], ncols: int) -> list[int]:
+    """Compute per-column max values for independent colour normalisation."""
+    return [max((data[k][c] for k in data), default=1) or 1 for c in range(ncols)]
+
+
+def _grid_col_maxes(
+    grid_data: dict[str, dict[str, int]], letters: list[str],
+) -> dict[str, int]:
+    """Compute per-column max for a 26×26 grid (keyed by column letter)."""
+    result: dict[str, int] = {}
+    for col in letters:
+        col_max = max(
+            (grid_data.get(row, {}).get(col, 0) for row in letters), default=1
+        )
+        result[col] = col_max or 1
+    return result
+
+
+def _heatmap_td(count: int, col_max: int) -> str:
+    """Render a heatmap <td> with data-value and per-column normalised --heat."""
+    intensity = count / col_max if col_max else 0
+    if count == 0:
+        return f'<td data-value="0" style="--heat: 0"></td>'
+    return f'<td data-value="{count}" style="--heat: {intensity:.3f}">{count:,}</td>'
+
+
 def generate_frequency_table_html(freq: pl.DataFrame, word_count: int) -> str:
-    """Generate an HTML frequency table with bar visualisation."""
+    """Generate the overall frequency table with bar visualisation."""
     max_count = freq["len"].max()
     rows: list[str] = []
     for row in freq.iter_rows(named=True):
@@ -222,17 +217,20 @@ def generate_frequency_table_html(freq: pl.DataFrame, word_count: int) -> str:
         rows.append(
             f'  <tr>'
             f'<td class="freq-letter">{letter}</td>'
-            f'<td class="freq-count">{count:,}</td>'
-            f'<td class="freq-rate">{freq_per_word:.3f}</td>'
+            f'<td class="freq-count" data-value="{count}">{count:,}</td>'
+            f'<td class="freq-rate" data-value="{freq_per_word:.4f}">{freq_per_word:.3f}</td>'
             f'<td class="freq-bar" style="background:linear-gradient(to right, '
             f'var(--md-primary-fg-color, #4051b5) {pct:.1f}%, transparent {pct:.1f}%)">'
             f'</td>'
             f'</tr>'
         )
     return (
-        '<table class="freq-table">\n'
+        '<table class="freq-table sortable-table">\n'
         "  <thead><tr>"
-        '<th>Letter</th><th>Count</th><th>Per word</th><th>Frequency</th>'
+        '<th class="sortable" data-col="0">Letter</th>'
+        '<th class="sortable" data-col="1">Count</th>'
+        '<th class="sortable" data-col="2">Per word</th>'
+        '<th>Frequency</th>'
         "</tr></thead>\n"
         "  <tbody>\n"
         + "\n".join(rows)
@@ -240,31 +238,30 @@ def generate_frequency_table_html(freq: pl.DataFrame, word_count: int) -> str:
     )
 
 
-def _heatmap_cell(count: int, max_count: int) -> str:
-    """Render a single heatmap <td> using a CSS custom property for intensity."""
-    intensity = count / max_count if max_count else 0
-    return f'<td style="--heat: {intensity:.3f}">{count:,}</td>'
-
-
 def generate_heatmap_html(unigrams: dict[str, list[int]]) -> str:
-    """Generate an HTML heatmap table for positional unigram frequencies."""
-    # Find max count across the entire grid for colour scaling
-    max_count = max(c for counts in unigrams.values() for c in counts) or 1
+    """Generate the positional unigram table with per-column normalisation and sorting."""
+    col_max = _col_maxes(unigrams, 5)
 
     rows: list[str] = []
     for letter in sorted(unigrams):
-        cells = [_heatmap_cell(count, max_count) for count in unigrams[letter]]
+        cells: list[str] = []
+        for pos in range(5):
+            count = unigrams[letter][pos]
+            cells.append(_heatmap_td(count, col_max[pos]))
         rows.append(
             f'  <tr><td class="row-label">{letter}</td>{"".join(cells)}</tr>'
         )
 
     header = (
-        "  <thead><tr><th></th>"
-        + "".join(f"<th>Pos {i}</th>" for i in range(1, 6))
+        '  <thead><tr><th class="sortable" data-col="0">Letter</th>'
+        + "".join(
+            f'<th class="sortable" data-col="{i}">Pos {i}</th>'
+            for i in range(1, 6)
+        )
         + "</tr></thead>"
     )
     return (
-        '<table class="heatmap">\n'
+        '<table class="heatmap sortable-table">\n'
         f"{header}\n"
         "  <tbody>\n"
         + "\n".join(rows)
@@ -272,94 +269,50 @@ def generate_heatmap_html(unigrams: dict[str, list[int]]) -> str:
     )
 
 
-def _neighbour_bars_html(
-    bigrams: dict[str, dict[str, dict[str, int]]], letter: str, pos: int
-) -> str:
-    """Generate the neighbour frequency bars HTML for a letter at a position."""
-    neighbours = get_neighbour_distributions(bigrams, letter, pos)
-    parts: list[str] = []
-
-    if "left" in neighbours and neighbours["left"]:
-        sorted_left = sorted(neighbours["left"].items(), key=lambda x: x[1], reverse=True)
-        max_left = sorted_left[0][1] if sorted_left else 1
-        parts.append(f"<h4>Position {pos - 1} \u2192 {letter}</h4>")
-        for nb_letter, count in sorted_left:
-            width = count / max_left * 100
-            parts.append(
-                f'<div class="bar-row">'
-                f'<span class="bar-label">{nb_letter}</span>'
-                f'<span class="bar" style="width: {width:.1f}%"></span>'
-                f'<span class="bar-count">{count}</span>'
-                f"</div>"
-            )
-
-    if "right" in neighbours and neighbours["right"]:
-        sorted_right = sorted(neighbours["right"].items(), key=lambda x: x[1], reverse=True)
-        max_right = sorted_right[0][1] if sorted_right else 1
-        parts.append(f"<h4>{letter} \u2192 Position {pos + 1}</h4>")
-        for nb_letter, count in sorted_right:
-            width = count / max_right * 100
-            parts.append(
-                f'<div class="bar-row">'
-                f'<span class="bar-label">{nb_letter}</span>'
-                f'<span class="bar" style="width: {width:.1f}%"></span>'
-                f'<span class="bar-count">{count}</span>'
-                f"</div>"
-            )
-
-    return "\n".join(parts)
-
-
 def generate_bigram_html(bigrams: dict[str, dict[str, dict[str, int]]]) -> str:
-    """Generate collapsible bigram heatmap grids for all 4 adjacent position pairs."""
+    """Generate collapsible bigram grids with plain row labels and per-column normalisation.
+
+    Drill-down data is embedded as JSON in data attributes on the grid,
+    rendered by JS on row click into an expansion panel below the grid.
+    """
     letters = list(string.ascii_lowercase)
     sections: list[str] = []
 
     for i in range(4):
         pair_name = f"{i + 1}_{i + 2}"
         pair_data = bigrams[pair_name]
-        pos_a = i + 1  # the row-header position
+        pos_a = i + 1
 
-        # Find max count for this grid's normalisation
-        max_count = max(
-            (count for second_dict in pair_data.values() for count in second_dict.values()),
-            default=1,
-        )
+        # Per-column normalisation
+        col_max = _grid_col_maxes(pair_data, letters)
 
         rows: list[str] = []
         for first in letters:
             cells: list[str] = []
             for second in letters:
                 count = pair_data.get(first, {}).get(second, 0)
-                cells.append(_heatmap_cell(count, max_count))
+                cells.append(_heatmap_td(count, col_max[second]))
+            rows.append(
+                f'  <tr><td class="row-label bigram-row" '
+                f'data-letter="{first}" data-pos="{pos_a}">'
+                f'{first}</td>{"".join(cells)}</tr>'
+            )
 
-            # Check if this letter has any occurrences at this position
-            row_sum = sum(pair_data.get(first, {}).values())
-            if row_sum == 0:
-                # Plain text — no drill-down for zero-occurrence letters
-                header_cell = f'<th class="row-label">{first}</th>'
-            else:
-                bars_html = _neighbour_bars_html(bigrams, first, pos_a)
-                header_cell = (
-                    "<th>"
-                    '<details class="drill-down">'
-                    f"<summary>{first}</summary>"
-                    f'<div class="neighbour-bars">{bars_html}</div>'
-                    "</details>"
-                    "</th>"
-                )
+        header_cells = "".join(
+            f'<th class="sortable" data-col="{idx + 1}">{ch}</th>'
+            for idx, ch in enumerate(letters)
+        )
+        header = f'  <thead><tr><th class="sortable" data-col="0"></th>{header_cells}</tr></thead>'
 
-            rows.append(f"  <tr>{header_cell}{''.join(cells)}</tr>")
-
-        header_cells = "".join(f"<th>{ch}</th>" for ch in letters)
-        header = f"  <thead><tr><th></th>{header_cells}</tr></thead>"
-
+        grid_id = f"bigram-{pair_name}"
         table = (
-            '<table class="heatmap bigram-grid">\n'
+            f'<table class="heatmap bigram-grid sortable-table" id="{grid_id}"'
+            f' data-pair="{pair_name}">\n'
             f"{header}\n"
             "  <tbody>\n"
             + "\n".join(rows)
-            + "\n  </tbody>\n</table>"
+            + "\n  </tbody>\n</table>\n"
+            f'<div class="bigram-expansion" id="expand-{grid_id}"></div>'
         )
 
         sections.append(
@@ -372,21 +325,10 @@ def generate_bigram_html(bigrams: dict[str, dict[str, dict[str, int]]]) -> str:
     return "\n\n".join(sections)
 
 
-def _trigram_cell(count: int, max_count: int, known1: str, known2: str) -> str:
-    """Render a single trigram heatmap <td> with data attributes for JS interaction."""
-    if count == 0:
-        return '<td class="trigram-cell empty"></td>'
-    intensity = count / max_count if max_count else 0
-    return (
-        f'<td class="trigram-cell" data-known1="{known1}" data-known2="{known2}"'
-        f' data-count="{count}" style="--heat: {intensity:.3f}">{count:,}</td>'
-    )
-
-
 def generate_trigram_html(
     trigram_summary: dict[str, dict[str, dict[str, int]]],
 ) -> str:
-    """Generate 9 heatmap grids under Positional Trigrams, organised by gap position then window."""
+    """Generate 9 trigram heatmap grids with per-column normalisation."""
     letters = list(string.ascii_lowercase)
     sections: list[str] = []
 
@@ -408,27 +350,38 @@ def generate_trigram_html(
             grid_name = f"gap{gap_pos}_{win_name}"
             grid_data = trigram_summary.get(grid_name, {})
 
-            # Find max count for normalisation
-            max_count = max(
-                (count for k2_dict in grid_data.values() for count in k2_dict.values()),
-                default=1,
-            )
+            col_max = _grid_col_maxes(grid_data, letters)
 
             rows: list[str] = []
             for k1 in letters:
                 cells: list[str] = []
                 for k2 in letters:
                     count = grid_data.get(k1, {}).get(k2, 0)
-                    cells.append(_trigram_cell(count, max_count, k1, k2))
+                    cm = col_max[k2]
+                    if count == 0:
+                        cells.append(
+                            '<td class="trigram-cell empty" data-value="0"></td>'
+                        )
+                    else:
+                        intensity = count / cm if cm else 0
+                        cells.append(
+                            f'<td class="trigram-cell" data-known1="{k1}" '
+                            f'data-known2="{k2}" data-count="{count}" '
+                            f'data-value="{count}" style="--heat: {intensity:.3f}">'
+                            f"{count:,}</td>"
+                        )
                 rows.append(
                     f'  <tr><td class="row-label">{k1}</td>{"".join(cells)}</tr>'
                 )
 
-            header_cells = "".join(f"<th>{ch}</th>" for ch in letters)
-            header = f"  <thead><tr><th></th>{header_cells}</tr></thead>"
+            header_cells = "".join(
+                f'<th class="sortable" data-col="{idx + 1}">{ch}</th>'
+                for idx, ch in enumerate(letters)
+            )
+            header = f'  <thead><tr><th class="sortable" data-col="0"></th>{header_cells}</tr></thead>'
 
             table = (
-                f'<table class="heatmap trigram-grid" data-grid="{grid_name}">\n'
+                f'<table class="heatmap trigram-grid sortable-table" data-grid="{grid_name}">\n'
                 f"{header}\n"
                 "  <tbody>\n"
                 + "\n".join(rows)
@@ -483,10 +436,14 @@ def main() -> None:
     freq = compute_overall_frequencies(words)
     trigram_detail, trigram_summary = compute_trigrams(words)
 
-    # Write trigram detail data as JSON
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     trigrams_json = DATA_DIR / "trigrams.json"
     trigrams_json.write_text(json.dumps(trigram_detail, sort_keys=True))
+
+    # Write bigram data for JS drill-downs
+    bigrams = compute_bigrams(words)
+    bigrams_json = DATA_DIR / "bigrams.json"
+    bigrams_json.write_text(json.dumps(bigrams, sort_keys=True))
 
     page = generate_page(words, freq, trigram_summary)
     INDEX_MD.parent.mkdir(parents=True, exist_ok=True)
