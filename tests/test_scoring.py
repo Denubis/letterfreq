@@ -150,3 +150,32 @@ def test_top_n_by_score_rank_one_has_highest_score() -> None:
     result = top_n_by_score(["bbb", "aaa", "ccc"], score, n=3)
     assert result[0][0] == "aaa"  # highest score (1.0)
     assert result[0][1] == pytest.approx(1.0)
+
+
+# ---- Runtime contract guards (proleptic-fix regression tests) -----------------
+
+
+def test_trigram_score_rejects_short_word() -> None:
+    with pytest.raises(ValueError, match="len\\(word\\) >= 3"):
+        trigram_score("ab", {}, {})
+
+
+def test_positional_endpoint_score_rejects_empty_word() -> None:
+    with pytest.raises(ValueError, match="non-empty"):
+        positional_endpoint_score("", {}, {})
+
+
+def test_top_n_by_score_rejects_nan_score() -> None:
+    def nan_score(_: str) -> float:
+        return float("nan")
+
+    with pytest.raises(ValueError, match="non-finite"):
+        top_n_by_score(["foo", "bar"], nan_score, n=10)
+
+
+def test_top_n_by_score_rejects_inf_score() -> None:
+    def inf_score(_: str) -> float:
+        return float("inf")
+
+    with pytest.raises(ValueError, match="non-finite"):
+        top_n_by_score(["foo"], inf_score, n=10)

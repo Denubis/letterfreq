@@ -7,6 +7,7 @@ absent letters/bigrams/trigrams by treating their rate as 0 (via dict.get).
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable, Iterable
 
 
@@ -43,8 +44,12 @@ def trigram_score(
     Returns `start_rates[word[:3]] + end_rates[word[-3:]]`. Both terms are 0
     if the trigram is absent from its respective rate dict.
 
-    Assumes len(word) >= 3.
+    Raises ValueError if len(word) < 3.
     """
+    if len(word) < 3:
+        raise ValueError(
+            f"trigram_score requires len(word) >= 3, got {len(word)}: {word!r}"
+        )
     return start_rates.get(word[:3], 0.0) + end_rates.get(word[-3:], 0.0)
 
 
@@ -58,8 +63,10 @@ def positional_endpoint_score(
     Per DR8: both terms contribute even when `word[0] == word[-1]` (no distinct
     cap, distinguishing this score from `letter_score`).
 
-    Assumes len(word) >= 1.
+    Raises ValueError on empty word.
     """
+    if not word:
+        raise ValueError("positional_endpoint_score requires a non-empty word")
     return first_rates.get(word[0], 0.0) + last_rates.get(word[-1], 0.0)
 
 
@@ -84,6 +91,14 @@ def top_n_by_score(
         top = top_n_by_score(words_10, score, n=50)
     """
     scored = [(word, score_fn(word)) for word in words]
+    # Guard against NaN/inf — Python's Timsort is non-deterministic on NaN
+    # tuples. Bad rate dicts (e.g., divide-by-zero upstream) surface here
+    # rather than producing silently misordered rankings.
+    for word, score in scored:
+        if not math.isfinite(score):
+            raise ValueError(
+                f"score_fn returned non-finite value {score!r} for word {word!r}"
+            )
     # Sort by (-score, word): higher score first, ties broken alphabetically.
     scored.sort(key=lambda pair: (-pair[1], pair[0]))
     return scored[:n]
