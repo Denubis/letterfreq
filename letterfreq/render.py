@@ -40,7 +40,7 @@ def render_letter_table(
         per_word = count / word_count if word_count > 0 else 0.0
         rows.append(
             f"  <tr>"
-            f'<td class="freq-letter">{letter}</td>'
+            f'<td class="freq-letter">{escape(letter)}</td>'
             f'<td class="freq-count" data-value="{count}">{count:,}</td>'
             f'<td class="freq-rate" data-value="{per_word:.4f}">{per_word:.4f}</td>'
             f"{_bar_cell(rate, max_rate)}"
