@@ -8,16 +8,21 @@ embed in a Markdown document. Tables use the existing `sortable-table` and
 
 from __future__ import annotations
 
+import json
 import string
 from html import escape
+from typing import Callable
 
-from collections import Counter as _Counter
-
+from letterfreq.grouping import (
+    GAP_EPSILON,
+    exemplar,
+    gap_cluster,
+    sort_bucket_words,
+)
 from letterfreq.scoring import (
     bigram_score,
     letter_score,
     positional_endpoint_score,
-    top_n_by_score,
     trigram_score,
 )
 
@@ -234,41 +239,99 @@ def _ranking_thead(columns: list[str]) -> str:
     return f"  <thead><tr>{cells}</tr></thead>\n"
 
 
+def _score_all(
+    words: list[str], score_fn: Callable[[str], float]
+) -> list[tuple[str, float]]:
+    """Score each word and return (word, score) pairs sorted desc by score, asc by word."""
+    scored = [(w, score_fn(w)) for w in words]
+    scored.sort(key=lambda sw: (-sw[1], sw[0]))
+    return scored
+
+
+def _tied_badge(bucket_size: int) -> str:
+    """Small visual marker for the exemplar row when a bucket collapses multiple words."""
+    if bucket_size <= 1:
+        return ""
+    return f' <span class="tied-count">+{bucket_size - 1} more</span>'
+
+
+def _bucket_row_attrs(bucket_id: str, bucket_size: int) -> str:
+    """Attributes for an exemplar <tr>. Only bucket-size > 1 rows become clickable."""
+    if bucket_size <= 1:
+        return ""
+    return f' class="bucket-row clickable" data-bucket-id="{escape(bucket_id)}"'
+
+
+def _bucket_data_island(
+    table_id: str,
+    bucket_data: dict[str, list[tuple[str, bool]]],
+) -> str:
+    """Emit a JSON script tag carrying the tied-word lists for a ranking table."""
+    payload = json.dumps(
+        {k: [[w, r] for w, r in v] for k, v in bucket_data.items()},
+        ensure_ascii=True,
+    )
+    return (
+        f'<script type="application/json" class="bucket-data" '
+        f'data-table="{escape(table_id)}">{payload}</script>'
+    )
+
+
+def _expansion_shell(table_id: str) -> str:
+    """Empty expansion panel that JS populates on row click."""
+    return (
+        f'<div class="bucket-expansion" id="expand-{escape(table_id)}" '
+        f'aria-live="polite"></div>'
+    )
+
+
 def render_letter_ranking(
     words_10: list[str],
     letter_rates: dict[str, float],
     top_n: int = 50,
+    us_dict: frozenset[str] = frozenset(),
+    eps: float = GAP_EPSILON,
 ) -> str:
-    """Top-N ten-letter words by letter_score, with distinct-letter transparency.
+    """Top-N buckets of ten-letter words by letter_score, with distinct-letter transparency.
 
-    Columns: Rank | Word | Distinct letters | Score.
-    The 'distinct letters' column lists the unique letters in the word, sorted
-    descending by their individual rate (highest-rate letter first).
+    Scores are gap-clustered with threshold `eps` so near-ties collapse into one
+    row. Each row shows an exemplar word (first dict-resident alphabetically,
+    falling back to first alphabetically), the exemplar's distinct letters
+    sorted by rate, and the bucket's top score. Buckets of size > 1 are
+    clickable; tied words are rendered into the expansion panel by JS.
     """
-    def score_fn(word: str) -> float:
-        return letter_score(word, letter_rates)
-
-    ranked = top_n_by_score(words_10, score_fn, n=top_n)
+    scored = _score_all(words_10, lambda w: letter_score(w, letter_rates))
+    buckets = gap_cluster(scored, eps=eps)[:top_n]
+    table_id = "rank-letter"
     rows: list[str] = []
-    for rank, (word, score) in enumerate(ranked, start=1):
+    bucket_data: dict[str, list[tuple[str, bool]]] = {}
+    for rank, bucket in enumerate(buckets, start=1):
+        bucket_words = [w for w, _ in bucket]
+        ex = exemplar(bucket_words, us_dict)
+        top_score = bucket[0][1]
         distinct_sorted = sorted(
-            set(word), key=lambda ch: (-letter_rates.get(ch, 0.0), ch)
+            set(ex), key=lambda ch: (-letter_rates.get(ch, 0.0), ch)
         )
         letters_str = " ".join(distinct_sorted)
+        bid = str(rank)
         rows.append(
-            f"  <tr>"
+            f"  <tr{_bucket_row_attrs(bid, len(bucket_words))}>"
             f'<td class="freq-rank" data-value="{rank}">{rank}</td>'
-            f'<td class="freq-word">{escape(word)}</td>'
+            f'<td class="freq-word">{escape(ex)}{_tied_badge(len(bucket_words))}</td>'
             f'<td class="freq-letters">{escape(letters_str)}</td>'
-            f'<td class="freq-score" data-value="{score:.6f}">{score:.4f}</td>'
+            f'<td class="freq-score" data-value="{top_score:.6f}">{top_score:.4f}</td>'
             f"</tr>"
         )
+        if len(bucket_words) > 1:
+            bucket_data[bid] = sort_bucket_words(bucket_words, us_dict)
     return (
-        '<table class="freq-table sortable-table ranking-table">\n'
+        f'<table class="freq-table sortable-table ranking-table" id="{table_id}">\n'
         + _ranking_thead(["Rank", "Word", "Distinct letters", "Score (letter)"])
         + "  <tbody>\n"
         + "\n".join(rows)
-        + "\n  </tbody>\n</table>"
+        + "\n  </tbody>\n</table>\n"
+        + _bucket_data_island(table_id, bucket_data) + "\n"
+        + _expansion_shell(table_id)
     )
 
 
@@ -276,45 +339,50 @@ def render_bigram_ranking(
     words_10: list[str],
     bigram_rates: dict[str, float],
     top_n: int = 50,
+    us_dict: frozenset[str] = frozenset(),
+    eps: float = GAP_EPSILON,
 ) -> str:
-    """Top-N ten-letter words by bigram_score, with top-3-contributing-bigrams transparency.
+    """Top-N buckets of ten-letter words by bigram_score, with top-3 contributor transparency.
 
-    Columns: Rank | Word | Top contributors | Score.
-    'Top contributors' lists the 3 bigrams that contribute most to the word's
-    score, where contribution = bigram_rate * count_of_that_bigram_in_word.
-    For a word like 'statistics' where 'st' appears 3 times, 'st' is listed
-    once with the multiplied contribution.
+    Under distinct-cap bigram scoring, each bigram in a word contributes its
+    rate exactly once regardless of how many times it appears. The contributor
+    cell therefore lists the exemplar's top 3 distinct bigrams by raw rate
+    (which equals contribution-to-score under the distinct cap).
     """
-    def score_fn(word: str) -> float:
-        return bigram_score(word, bigram_rates)
-
-    ranked = top_n_by_score(words_10, score_fn, n=top_n)
+    scored = _score_all(words_10, lambda w: bigram_score(w, bigram_rates))
+    buckets = gap_cluster(scored, eps=eps)[:top_n]
+    table_id = "rank-bigram"
     rows: list[str] = []
-    for rank, (word, score) in enumerate(ranked, start=1):
-        # Per-word bigram occurrence count
-        per_word_bigrams = _Counter(word[i : i + 2] for i in range(len(word) - 1))
+    bucket_data: dict[str, list[tuple[str, bool]]] = {}
+    for rank, bucket in enumerate(buckets, start=1):
+        bucket_words = [w for w, _ in bucket]
+        ex = exemplar(bucket_words, us_dict)
+        top_score = bucket[0][1]
+        distinct_bigrams = {ex[i : i + 2] for i in range(len(ex) - 1)}
         contribs = sorted(
-            (
-                (bg, bigram_rates.get(bg, 0.0) * cnt)
-                for bg, cnt in per_word_bigrams.items()
-            ),
-            key=lambda kv: (-kv[1], kv[0]),
-        )[:5]
-        contrib_str = ", ".join(bg for bg, _ in contribs)
+            distinct_bigrams,
+            key=lambda bg: (-bigram_rates.get(bg, 0.0), bg),
+        )[:3]
+        contrib_str = ", ".join(contribs)
+        bid = str(rank)
         rows.append(
-            f"  <tr>"
+            f"  <tr{_bucket_row_attrs(bid, len(bucket_words))}>"
             f'<td class="freq-rank" data-value="{rank}">{rank}</td>'
-            f'<td class="freq-word">{escape(word)}</td>'
+            f'<td class="freq-word">{escape(ex)}{_tied_badge(len(bucket_words))}</td>'
             f'<td class="freq-letters">{escape(contrib_str)}</td>'
-            f'<td class="freq-score" data-value="{score:.6f}">{score:.4f}</td>'
+            f'<td class="freq-score" data-value="{top_score:.6f}">{top_score:.4f}</td>'
             f"</tr>"
         )
+        if len(bucket_words) > 1:
+            bucket_data[bid] = sort_bucket_words(bucket_words, us_dict)
     return (
-        '<table class="freq-table sortable-table ranking-table">\n'
+        f'<table class="freq-table sortable-table ranking-table" id="{table_id}">\n'
         + _ranking_thead(["Rank", "Word", "Top contributors", "Score (bigram)"])
         + "  <tbody>\n"
         + "\n".join(rows)
-        + "\n  </tbody>\n</table>"
+        + "\n  </tbody>\n</table>\n"
+        + _bucket_data_island(table_id, bucket_data) + "\n"
+        + _expansion_shell(table_id)
     )
 
 
@@ -323,32 +391,45 @@ def render_trigram_ranking(
     start_rates: dict[str, float],
     end_rates: dict[str, float],
     top_n: int = 50,
+    us_dict: frozenset[str] = frozenset(),
+    eps: float = GAP_EPSILON,
 ) -> str:
-    """Top-N ten-letter words by trigram_score (start + end).
+    """Top-N buckets of ten-letter words by trigram_score (start + end).
 
-    Columns: Rank | Word | Start | End | Score.
+    Columns: Rank | Word | Start | End | Score. Collapses the `pre___ing` tier
+    and other start+end-trigram twins into a single row per distinct score.
     """
-    def score_fn(w: str) -> float:
-        return trigram_score(w, start_rates, end_rates)
-
-    ranked = top_n_by_score(words_10, score_fn, n=top_n)
+    scored = _score_all(
+        words_10, lambda w: trigram_score(w, start_rates, end_rates)
+    )
+    buckets = gap_cluster(scored, eps=eps)[:top_n]
+    table_id = "rank-trigram"
     rows: list[str] = []
-    for rank, (word, score) in enumerate(ranked, start=1):
+    bucket_data: dict[str, list[tuple[str, bool]]] = {}
+    for rank, bucket in enumerate(buckets, start=1):
+        bucket_words = [w for w, _ in bucket]
+        ex = exemplar(bucket_words, us_dict)
+        top_score = bucket[0][1]
+        bid = str(rank)
         rows.append(
-            f"  <tr>"
+            f"  <tr{_bucket_row_attrs(bid, len(bucket_words))}>"
             f'<td class="freq-rank" data-value="{rank}">{rank}</td>'
-            f'<td class="freq-word">{escape(word)}</td>'
-            f'<td class="freq-letters">{escape(word[:3])}</td>'
-            f'<td class="freq-letters">{escape(word[-3:])}</td>'
-            f'<td class="freq-score" data-value="{score:.6f}">{score:.4f}</td>'
+            f'<td class="freq-word">{escape(ex)}{_tied_badge(len(bucket_words))}</td>'
+            f'<td class="freq-letters">{escape(ex[:3])}</td>'
+            f'<td class="freq-letters">{escape(ex[-3:])}</td>'
+            f'<td class="freq-score" data-value="{top_score:.6f}">{top_score:.4f}</td>'
             f"</tr>"
         )
+        if len(bucket_words) > 1:
+            bucket_data[bid] = sort_bucket_words(bucket_words, us_dict)
     return (
-        '<table class="freq-table sortable-table ranking-table">\n'
+        f'<table class="freq-table sortable-table ranking-table" id="{table_id}">\n'
         + _ranking_thead(["Rank", "Word", "Start", "End", "Score (trigram)"])
         + "  <tbody>\n"
         + "\n".join(rows)
-        + "\n  </tbody>\n</table>"
+        + "\n  </tbody>\n</table>\n"
+        + _bucket_data_island(table_id, bucket_data) + "\n"
+        + _expansion_shell(table_id)
     )
 
 
@@ -358,32 +439,45 @@ def render_positional_ranking(
     first_rates: dict[str, float],
     last_rates: dict[str, float],
     top_n: int = 50,
+    us_dict: frozenset[str] = frozenset(),
+    eps: float = GAP_EPSILON,
 ) -> str:
-    """Top-N ten-letter words by positional_endpoint_score.
+    """Top-N buckets of ten-letter words by positional_endpoint_score.
 
-    Score = letter_score(w) + first_rate[w[0]] + last_rate[w[-1]].
-    Columns: Rank | Word | First | Last | Score. Both positional terms count
-    even when first == last (no endpoint distinct cap).
+    Score = letter_score(w) + first_rate[w[0]] + last_rate[w[-1]]. Columns:
+    Rank | Word | First | Last | Score. Both positional terms count even when
+    first == last (no endpoint distinct cap).
     """
-    def score_fn(w: str) -> float:
-        return positional_endpoint_score(w, letter_rates, first_rates, last_rates)
-
-    ranked = top_n_by_score(words_10, score_fn, n=top_n)
+    scored = _score_all(
+        words_10,
+        lambda w: positional_endpoint_score(w, letter_rates, first_rates, last_rates),
+    )
+    buckets = gap_cluster(scored, eps=eps)[:top_n]
+    table_id = "rank-positional"
     rows: list[str] = []
-    for rank, (word, score) in enumerate(ranked, start=1):
+    bucket_data: dict[str, list[tuple[str, bool]]] = {}
+    for rank, bucket in enumerate(buckets, start=1):
+        bucket_words = [w for w, _ in bucket]
+        ex = exemplar(bucket_words, us_dict)
+        top_score = bucket[0][1]
+        bid = str(rank)
         rows.append(
-            f"  <tr>"
+            f"  <tr{_bucket_row_attrs(bid, len(bucket_words))}>"
             f'<td class="freq-rank" data-value="{rank}">{rank}</td>'
-            f'<td class="freq-word">{escape(word)}</td>'
-            f'<td class="freq-letters">{escape(word[0])}</td>'
-            f'<td class="freq-letters">{escape(word[-1])}</td>'
-            f'<td class="freq-score" data-value="{score:.6f}">{score:.4f}</td>'
+            f'<td class="freq-word">{escape(ex)}{_tied_badge(len(bucket_words))}</td>'
+            f'<td class="freq-letters">{escape(ex[0])}</td>'
+            f'<td class="freq-letters">{escape(ex[-1])}</td>'
+            f'<td class="freq-score" data-value="{top_score:.6f}">{top_score:.4f}</td>'
             f"</tr>"
         )
+        if len(bucket_words) > 1:
+            bucket_data[bid] = sort_bucket_words(bucket_words, us_dict)
     return (
-        '<table class="freq-table sortable-table ranking-table">\n'
+        f'<table class="freq-table sortable-table ranking-table" id="{table_id}">\n'
         + _ranking_thead(["Rank", "Word", "First", "Last", "Score (endpoint)"])
         + "  <tbody>\n"
         + "\n".join(rows)
-        + "\n  </tbody>\n</table>"
+        + "\n  </tbody>\n</table>\n"
+        + _bucket_data_island(table_id, bucket_data) + "\n"
+        + _expansion_shell(table_id)
     )

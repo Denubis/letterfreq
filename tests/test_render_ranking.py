@@ -1,7 +1,7 @@
 """Tests for letterfreq.render ranking-table functions.
 
-Verifies row counts, structural HTML, and that transparency columns surface
-the correct components.
+Verifies row counts, structural HTML, transparency columns, bucket collapse,
+exemplar cascade, and expansion-panel shell emission.
 """
 
 from __future__ import annotations
@@ -27,7 +27,6 @@ def _ten_letter_words() -> list[str]:
     letters = string.ascii_lowercase
     for i, l1 in enumerate(letters):
         for j, l2 in enumerate(letters):
-            # Build a 10-letter word that varies in start, middle, and end.
             middle = letters[(i + j) % 26 : (i + j) % 26 + 6]
             if len(middle) < 6:
                 middle += letters[: 6 - len(middle)]
@@ -37,23 +36,43 @@ def _ten_letter_words() -> list[str]:
     return pairs
 
 
+def _power_of_two_rates() -> dict[str, float]:
+    """Per-letter rates 2^-i so distinct letter-sets yield distinct sums."""
+    return {chr(ord("a") + i): 2.0 ** -(i + 1) for i in range(26)}
+
+
+def _count_tbody_rows(html: str) -> int:
+    # <thead> has one <tr>; count total and subtract.
+    total_tr = html.count("<tr")
+    head_tr = html.count("<thead>")
+    return total_tr - head_tr
+
+
 # ---- Letter ranking -----------------------------------------------------------
 
-# AC6.1
-def test_letter_ranking_has_top_50_rows() -> None:
-    rates = {ch: 1 / 26 for ch in string.ascii_lowercase}
+
+def test_letter_ranking_caps_at_top_n_buckets() -> None:
+    """With rates that force distinct scores per distinct letter-set, the renderer
+    produces one row per unique score up to top_n. 60 generated words with
+    power-of-two letter rates always produce more than 50 distinct letter-sets,
+    so exactly 50 rows appear."""
+    rates = _power_of_two_rates()
     html = render_letter_ranking(_ten_letter_words(), rates, top_n=50)
-    assert html.count("<tr>") == 51  # 1 thead + 50 tbody
+    assert _count_tbody_rows(html) == 50
+
+
+def test_letter_ranking_collapses_exact_ties_into_fewer_rows() -> None:
+    """Uniform rates make every distinct-letter-count tier score-identical; the
+    renderer collapses those into buckets, so far fewer than top_n rows appear."""
+    rates = {ch: 0.1 for ch in string.ascii_lowercase}
+    html = render_letter_ranking(_ten_letter_words(), rates, top_n=50)
+    assert _count_tbody_rows(html) < 50
 
 
 def test_letter_ranking_transparency_lists_distinct_letters_sorted_by_rate() -> None:
-    # Non-uniform rates so ordering can be verified, not just presence.
-    # Expected order in transparency cell: a (0.5), b (0.3), c (0.1), d (0.05), e (0.02).
     rates = {ch: 0.001 for ch in string.ascii_lowercase}
     rates.update({"a": 0.5, "b": 0.3, "c": 0.1, "d": 0.05, "e": 0.02})
     html = render_letter_ranking(["aabbccddee"], rates, top_n=1)
-    # Distinct letters of 'aabbccddee' are {a,b,c,d,e} — joined with spaces,
-    # sorted by (-rate, letter) so the cell reads "a b c d e".
     assert "a b c d e" in html
 
 
@@ -64,62 +83,115 @@ def test_letter_ranking_is_sortable() -> None:
     assert 'class="sortable"' in html
 
 
+def test_letter_ranking_exemplar_cascade_prefers_dict_resident() -> None:
+    """Tied words with dict-resident member → exemplar is the dict word."""
+    rates = {ch: 0.1 for ch in string.ascii_lowercase}
+    # Three anagrams — same distinct-letter set, same score.
+    words = ["bacdefghij", "abcdefghij", "cabdefghij"]
+    us_dict = frozenset({"bacdefghij"})
+    html = render_letter_ranking(words, rates, top_n=1, us_dict=us_dict)
+    # Exemplar is the one in the dict, not alphabetically-first.
+    assert '>bacdefghij' in html
+    # Tied-badge indicates 2 other words in the bucket.
+    assert "+2 more" in html
+
+
+def test_letter_ranking_emits_expansion_shell_and_bucket_data() -> None:
+    rates = {ch: 0.1 for ch in string.ascii_lowercase}
+    words = ["abcdefghij", "bacdefghij"]  # anagrams → one bucket
+    html = render_letter_ranking(words, rates, top_n=1)
+    assert 'id="expand-rank-letter"' in html
+    assert 'class="bucket-expansion"' in html
+    assert 'class="bucket-data"' in html
+    # data-table wires the script to the matching table id
+    assert 'data-table="rank-letter"' in html
+
+
+def test_letter_ranking_singleton_bucket_has_no_click_markup() -> None:
+    rates = {chr(ord("a") + i): 2.0 ** -(i + 1) for i in range(26)}
+    html = render_letter_ranking(["abcdefghij"], rates, top_n=1)
+    # Singleton bucket: no 'clickable' class, no 'more' badge.
+    assert "clickable" not in html
+    assert "more" not in html
+
+
 # ---- Bigram ranking -----------------------------------------------------------
 
-# AC6.2
-def test_bigram_ranking_has_top_50_rows() -> None:
-    rates = {f"{a}{b}": 0.01 for a in "abcde" for b in "abcde"}
+
+def test_bigram_ranking_caps_at_top_n_buckets() -> None:
+    # Bigram-set collisions across generated words are common, so the bucket
+    # count is input-dependent. The contract being tested is "never exceed top_n".
+    rates = {
+        f"{chr(ord('a') + i)}{chr(ord('a') + j)}": 2.0 ** -(i * 26 + j + 1)
+        for i in range(26) for j in range(26)
+    }
     html = render_bigram_ranking(_ten_letter_words(), rates, top_n=50)
-    assert html.count("<tr>") == 51
+    assert 1 <= _count_tbody_rows(html) <= 50
 
 
-def test_bigram_ranking_transparency_top_3_by_contribution() -> None:
-    """Transparency sort is by contribution (rate × per-word-count), NOT raw rate.
-
-    Word 'ababababcd' has bigrams: ab (4x), ba (3x), bc (1x), cd (1x).
-    Rates: ab=0.1, ba=0.0, bc=0.0, cd=0.25.
-    Contributions: ab=0.4, cd=0.25, ba=0.0, bc=0.0.
-    Raw-rate ordering would put cd before ab; contribution ordering puts ab first.
-    If the implementation were sorting by raw rate, 'cd, ab' would appear in the cell.
-    """
+def test_bigram_ranking_transparency_top_3_by_rate_under_distinct_cap() -> None:
+    """Under distinct-cap bigram scoring each bigram contributes its rate once,
+    so transparency is top-3 distinct bigrams by rate (contribution = rate).
+    'ababababcd' has distinct bigrams {ab, ba, bc, cd}."""
     rates = {"ab": 0.1, "ba": 0.0, "bc": 0.0, "cd": 0.25}
     html = render_bigram_ranking(["ababababcd"], rates, top_n=1)
-    # Correct contribution ordering: "ab" comes before "cd"
-    assert "ab, cd" in html
-    # Negative assertion: the raw-rate ordering must NOT appear
-    assert "cd, ab" not in html
+    # Top 3 by rate: cd (0.25), ab (0.1), then ba and bc tie at 0.0 — alphabetical
+    # tiebreak picks ba before bc.
+    assert "cd, ab, ba" in html
+
+
+def test_bigram_ranking_collapses_exact_ties() -> None:
+    rates = {f"{a}{b}": 0.01 for a in "ab" for b in "ab"}
+    # Two words with identical distinct-bigram sets score equal; collapse to 1 bucket.
+    words = ["ababababab", "babababab" + "a"]  # both are ab/ba alternations
+    html = render_bigram_ranking(words, rates, top_n=50)
+    assert _count_tbody_rows(html) == 1
 
 
 # ---- Trigram ranking ----------------------------------------------------------
 
-# AC6.3
-def test_trigram_ranking_has_top_50_rows() -> None:
-    start_rates = {f"{a}{b}{c}": 0.01 for a in "abc" for b in "abc" for c in "abc"}
+
+def test_trigram_ranking_caps_at_top_n_buckets() -> None:
+    start_rates = {
+        f"{chr(ord('a') + i)}{chr(ord('a') + j)}{chr(ord('a') + k)}":
+            2.0 ** -(i * 676 + j * 26 + k + 1)
+        for i in range(5) for j in range(5) for k in range(5)
+    }
     end_rates = dict(start_rates)
     html = render_trigram_ranking(_ten_letter_words(), start_rates, end_rates, top_n=50)
-    assert html.count("<tr>") == 51
+    assert _count_tbody_rows(html) <= 50
 
 
 def test_trigram_ranking_shows_separate_start_end_columns() -> None:
     html = render_trigram_ranking(["abcdefghij"], {"abc": 0.1}, {"hij": 0.1}, top_n=1)
     assert "Start" in html
     assert "End" in html
-    # Both trigrams should appear in cells
     assert "abc" in html
     assert "hij" in html
 
 
+def test_trigram_ranking_collapses_pre_ing_style_tier() -> None:
+    """Words sharing start+end trigram score identically under trigram_score,
+    so they collapse to one bucket even with many different middles."""
+    start = {"pre": 0.01}
+    end = {"ing": 0.04}
+    words = ["preallying", "preambling", "prebidding", "prebinding"]
+    html = render_trigram_ranking(words, start, end, top_n=50)
+    assert _count_tbody_rows(html) == 1
+    assert "+3 more" in html
+
+
 # ---- Positional ranking -------------------------------------------------------
 
-# AC6.5
-def test_positional_ranking_has_top_50_rows() -> None:
-    letter_rates = {ch: 1 / 26 for ch in string.ascii_lowercase}
-    first_rates = {ch: 1 / 26 for ch in string.ascii_lowercase}
-    last_rates = {ch: 1 / 26 for ch in string.ascii_lowercase}
+
+def test_positional_ranking_caps_at_top_n_buckets() -> None:
+    letter_rates = _power_of_two_rates()
+    first_rates = {ch: 2.0 ** -(i + 27) for i, ch in enumerate(string.ascii_lowercase)}
+    last_rates = {ch: 2.0 ** -(i + 53) for i, ch in enumerate(string.ascii_lowercase)}
     html = render_positional_ranking(
         _ten_letter_words(), letter_rates, first_rates, last_rates, top_n=50
     )
-    assert html.count("<tr>") == 51
+    assert _count_tbody_rows(html) == 50
 
 
 def test_positional_ranking_shows_separate_first_last_columns() -> None:
@@ -132,18 +204,17 @@ def test_positional_ranking_shows_separate_first_last_columns() -> None:
 
 
 def test_positional_ranking_doubled_endpoint_word() -> None:
-    """A word where w[0] == w[-1] still receives both positional bonuses."""
     letter_rates = {"a": 1.0}
     first_rates = {"a": 0.5}
     last_rates = {"a": 0.3}
     html = render_positional_ranking(
         ["aaaaaaaaaa"], letter_rates, first_rates, last_rates, top_n=1
     )
-    # Score = letter_score('aaaa...')=1.0 + first['a']=0.5 + last['a']=0.3 = 1.8
     assert "1.8000" in html
 
 
-# ---- AC6.4: All ranking tables sortable ---------------------------------------
+# ---- Shared structural assertions ---------------------------------------------
+
 
 def test_all_ranking_tables_have_sortable_class() -> None:
     rates = {ch: 0.1 for ch in string.ascii_lowercase}
@@ -159,3 +230,18 @@ def test_all_ranking_tables_have_sortable_class() -> None:
     ]
     for html in htmls:
         assert 'class="sortable"' in html
+
+
+def test_all_ranking_tables_emit_expansion_shell() -> None:
+    rates = {ch: 0.1 for ch in string.ascii_lowercase}
+    bigram_rates = {f"{a}{b}": 0.01 for a in "abcd" for b in "abcd"}
+    words = ["abcdefghij"]
+    htmls = [
+        (render_letter_ranking(words, rates, top_n=1), "rank-letter"),
+        (render_bigram_ranking(words, bigram_rates, top_n=1), "rank-bigram"),
+        (render_trigram_ranking(words, {"abc": 0.1}, {"hij": 0.1}, top_n=1), "rank-trigram"),
+        (render_positional_ranking(words, rates, {"a": 0.1}, {"j": 0.1}, top_n=1), "rank-positional"),
+    ]
+    for html, table_id in htmls:
+        assert f'id="expand-{table_id}"' in html
+        assert f'data-table="{table_id}"' in html
