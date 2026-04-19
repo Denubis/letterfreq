@@ -21,7 +21,7 @@ ALPHA_LOWER = re.compile(r"^[a-z]+$")
 
 def fetch_words() -> list[str]:
     """Download the upstream alpha-only word list and return cleaned lowercase entries."""
-    with urllib.request.urlopen(SOURCE_URL) as response:
+    with urllib.request.urlopen(SOURCE_URL, timeout=60) as response:
         raw = response.read().decode("utf-8")
     cleaned: list[str] = []
     for line in raw.splitlines():
@@ -33,7 +33,8 @@ def fetch_words() -> list[str]:
 
 def write_filtered(words: list[str], out_path: Path, min_len: int, max_len: int) -> int:
     """Write the subset of `words` whose length is in [min_len, max_len] inclusive."""
-    selected = sorted({w for w in words if min_len <= len(w) <= max_len})
+    # words_alpha.txt is already deduplicated upstream; list comprehension suffices.
+    selected = sorted(w for w in words if min_len <= len(w) <= max_len)
     out_path.write_text("\n".join(selected) + "\n")
     return len(selected)
 
