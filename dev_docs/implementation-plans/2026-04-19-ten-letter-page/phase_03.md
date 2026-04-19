@@ -318,7 +318,7 @@ def test_top_n_by_score_rank_one_has_highest_score() -> None:
 uv run pytest tests/test_scoring.py -v
 ```
 
-Expected: all 17 tests pass.
+Expected: all 16 tests pass.
 
 Run full test suite to confirm no regression:
 
