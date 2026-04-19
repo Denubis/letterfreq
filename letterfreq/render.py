@@ -11,6 +11,16 @@ from __future__ import annotations
 import string
 from html import escape
 
+from collections import Counter as _Counter
+
+from letterfreq.scoring import (
+    bigram_score,
+    letter_score,
+    positional_endpoint_score,
+    top_n_by_score,
+    trigram_score,
+)
+
 
 def _bar_cell(rate: float, max_rate: float) -> str:
     """Render the visual bar cell as a CSS linear-gradient td."""
@@ -209,4 +219,165 @@ def render_first_last_pair(
         f"{last_table}\n"
         "</div>\n"
         "</div>"
+    )
+
+
+# --- Ranking-table renderers (Phase 5) ----------------------------------------
+
+
+def _ranking_thead(columns: list[str]) -> str:
+    """Render a sortable <thead> from a list of column headings."""
+    cells = "".join(
+        f'<th class="sortable" data-col="{i}">{escape(col)}</th>'
+        for i, col in enumerate(columns)
+    )
+    return f"  <thead><tr>{cells}</tr></thead>\n"
+
+
+def render_letter_ranking(
+    words_10: list[str],
+    letter_rates: dict[str, float],
+    top_n: int = 50,
+) -> str:
+    """Top-N ten-letter words by letter_score, with distinct-letter transparency.
+
+    Columns: Rank | Word | Distinct letters | Score.
+    The 'distinct letters' column lists the unique letters in the word, sorted
+    descending by their individual rate (highest-rate letter first).
+    """
+    score_fn = lambda word: letter_score(word, letter_rates)
+    ranked = top_n_by_score(words_10, score_fn, n=top_n)
+    rows: list[str] = []
+    for rank, (word, score) in enumerate(ranked, start=1):
+        distinct_sorted = sorted(
+            set(word), key=lambda l: (-letter_rates.get(l, 0.0), l)
+        )
+        letters_str = " ".join(distinct_sorted)
+        rows.append(
+            f"  <tr>"
+            f'<td class="freq-rank" data-value="{rank}">{rank}</td>'
+            f'<td class="freq-word">{escape(word)}</td>'
+            f'<td class="freq-letters">{escape(letters_str)}</td>'
+            f'<td class="freq-score" data-value="{score:.6f}">{score:.4f}</td>'
+            f"</tr>"
+        )
+    return (
+        '<table class="freq-table sortable-table ranking-table">\n'
+        + _ranking_thead(["Rank", "Word", "Distinct letters", "Score (letter)"])
+        + "  <tbody>\n"
+        + "\n".join(rows)
+        + "\n  </tbody>\n</table>"
+    )
+
+
+def render_bigram_ranking(
+    words_10: list[str],
+    bigram_rates: dict[str, float],
+    top_n: int = 50,
+) -> str:
+    """Top-N ten-letter words by bigram_score, with top-3-contributing-bigrams transparency.
+
+    Columns: Rank | Word | Top contributors | Score.
+    'Top contributors' lists the 3 bigrams that contribute most to the word's
+    score, where contribution = bigram_rate * count_of_that_bigram_in_word.
+    For a word like 'statistics' where 'st' appears 3 times, 'st' is listed
+    once with the multiplied contribution.
+    """
+    score_fn = lambda word: bigram_score(word, bigram_rates)
+    ranked = top_n_by_score(words_10, score_fn, n=top_n)
+    rows: list[str] = []
+    for rank, (word, score) in enumerate(ranked, start=1):
+        # Per-word bigram occurrence count
+        per_word_bigrams = _Counter(word[i : i + 2] for i in range(len(word) - 1))
+        contribs = sorted(
+            (
+                (bg, bigram_rates.get(bg, 0.0) * cnt)
+                for bg, cnt in per_word_bigrams.items()
+            ),
+            key=lambda kv: (-kv[1], kv[0]),
+        )[:3]
+        contrib_str = ", ".join(bg for bg, _ in contribs)
+        rows.append(
+            f"  <tr>"
+            f'<td class="freq-rank" data-value="{rank}">{rank}</td>'
+            f'<td class="freq-word">{escape(word)}</td>'
+            f'<td class="freq-letters">{escape(contrib_str)}</td>'
+            f'<td class="freq-score" data-value="{score:.6f}">{score:.4f}</td>'
+            f"</tr>"
+        )
+    return (
+        '<table class="freq-table sortable-table ranking-table">\n'
+        + _ranking_thead(["Rank", "Word", "Top contributors", "Score (bigram)"])
+        + "  <tbody>\n"
+        + "\n".join(rows)
+        + "\n  </tbody>\n</table>"
+    )
+
+
+def render_trigram_ranking(
+    words_10: list[str],
+    start_rates: dict[str, float],
+    end_rates: dict[str, float],
+    top_n: int = 50,
+) -> str:
+    """Top-N ten-letter words by trigram_score (start + end).
+
+    Columns: Rank | Word | Start | End | Score.
+    """
+    def score_fn(w: str) -> float:
+        return trigram_score(w, start_rates, end_rates)
+
+    ranked = top_n_by_score(words_10, score_fn, n=top_n)
+    rows: list[str] = []
+    for rank, (word, score) in enumerate(ranked, start=1):
+        rows.append(
+            f"  <tr>"
+            f'<td class="freq-rank" data-value="{rank}">{rank}</td>'
+            f'<td class="freq-word">{escape(word)}</td>'
+            f'<td class="freq-letters">{escape(word[:3])}</td>'
+            f'<td class="freq-letters">{escape(word[-3:])}</td>'
+            f'<td class="freq-score" data-value="{score:.6f}">{score:.4f}</td>'
+            f"</tr>"
+        )
+    return (
+        '<table class="freq-table sortable-table ranking-table">\n'
+        + _ranking_thead(["Rank", "Word", "Start", "End", "Score (trigram)"])
+        + "  <tbody>\n"
+        + "\n".join(rows)
+        + "\n  </tbody>\n</table>"
+    )
+
+
+def render_positional_ranking(
+    words_10: list[str],
+    first_rates: dict[str, float],
+    last_rates: dict[str, float],
+    top_n: int = 50,
+) -> str:
+    """Top-N ten-letter words by positional_endpoint_score (first + last).
+
+    Columns: Rank | Word | First | Last | Score.
+    Per DR8: both terms count even when first == last.
+    """
+    def score_fn(w: str) -> float:
+        return positional_endpoint_score(w, first_rates, last_rates)
+
+    ranked = top_n_by_score(words_10, score_fn, n=top_n)
+    rows: list[str] = []
+    for rank, (word, score) in enumerate(ranked, start=1):
+        rows.append(
+            f"  <tr>"
+            f'<td class="freq-rank" data-value="{rank}">{rank}</td>'
+            f'<td class="freq-word">{escape(word)}</td>'
+            f'<td class="freq-letters">{escape(word[0])}</td>'
+            f'<td class="freq-letters">{escape(word[-1])}</td>'
+            f'<td class="freq-score" data-value="{score:.6f}">{score:.4f}</td>'
+            f"</tr>"
+        )
+    return (
+        '<table class="freq-table sortable-table ranking-table">\n'
+        + _ranking_thead(["Rank", "Word", "First", "Last", "Score (endpoint)"])
+        + "  <tbody>\n"
+        + "\n".join(rows)
+        + "\n  </tbody>\n</table>"
     )
