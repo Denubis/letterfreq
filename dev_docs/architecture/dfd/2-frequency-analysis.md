@@ -36,7 +36,7 @@ flowchart LR
 | Process | Responsibility | Implementation |
 |---------|---------------|----------------|
 | 2.1 Five-letter pipeline | Read `data/words.txt`; compute overall + positional unigram, bigram, trigram frequencies; emit Markdown + JSON for `/five/`. | `main.py` (`main.py`, `2982dbe`). After the design plan it writes to `docs/five/index.md` and `docs/five/data/` instead of `docs/index.md` and `docs/data/` (`dev_docs/design-plans/2026-04-19-ten-letter-page.md`). |
-| 2.2 Ten-letter pipeline | Read `data/words_10.txt` and `data/words_3_to_10.txt`; compute baseline letter/bigram/trigram rates; rank ten-letter words by three scores; emit Markdown for `/ten/`. | `main_ten.py` (`dev_docs/design-plans/2026-04-19-ten-letter-page.md`, prospective). |
+| 2.2 Ten-letter pipeline | Read `data/words_10.txt` and `data/words_3_to_10.txt`; compute baseline letter, bigram, start/end trigram, and first/last letter rates; rank ten-letter words by four scores (letter-coverage, bigram, start+end trigram, positional first+last per DR8); emit Markdown for `/ten/`. | `main_ten.py` (`dev_docs/design-plans/2026-04-19-ten-letter-page.md`, prospective). |
 | Pure modules | Functional core: counting, rate computation, scoring, HTML rendering. Side-effect-free. Independently testable. | `letterfreq/reference.py`, `letterfreq/scoring.py`, `letterfreq/render.py` (`dev_docs/design-plans/2026-04-19-ten-letter-page.md`, prospective). |
 
 ## Data Stores

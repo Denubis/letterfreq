@@ -4,7 +4,7 @@
 
 ## Summary
 
-This work extends the existing single-page letter-frequency site into a three-page site. The current five-letter analysis moves to `/five/`, a new `/ten/` page is added, and a landing page at `/` links both. The ten-letter page answers a different question from the five-letter page: rather than positional heatmaps, it asks which ten-letter words are best covered by the most common letters, bigrams, and trigrams in English. It does this through two halves: reference tables (letter, bigram, start/end trigram frequencies computed over a broad 3–10 letter baseline corpus) and ranking tables (top-50 ten-letter words scored against those baseline rates, with a transparency column showing the components driving each word's score).
+This work extends the existing single-page letter-frequency site into a three-page site. The current five-letter analysis moves to `/five/`, a new `/ten/` page is added, and a landing page at `/` links both. The ten-letter page answers a different question from the five-letter page: rather than positional heatmaps, it asks which ten-letter words are best covered by the most common letters, bigrams, trigrams, and word-endpoint letters in English. It does this through two halves: reference tables (letter, bigram, start/end trigram, and first/last letter frequencies computed over a broad 3–10 letter baseline corpus) and ranking tables (top-50 ten-letter words scored against those baseline rates by four independent metrics — letter-coverage, bigram, start+end trigram, and positional first+last — with a transparency column showing the components driving each word's score).
 
 The implementation reorganises Python into a small `letterfreq/` package with a strict functional-core/imperative-shell split: pure modules (`reference.py`, `scoring.py`, `render.py`) are independently testable; entry scripts (`main.py`, `main_ten.py`) do I/O and call them. Corpus files are pre-filtered and committed, keeping build times fast. The static-first rendering approach from the five-letter page is preserved: all tables are emitted as HTML embedded in Markdown, with client-side sorting via the existing JS.
 
@@ -13,8 +13,8 @@ The implementation reorganises Python into a small `letterfreq/` package with a 
 The design is done when:
 
 1. The site serves three URLs via Zensical: `/` (landing), `/five/` (existing five-letter analysis, behaviour unchanged), `/ten/` (new ten-letter page). All three are reachable from the site navigation.
-2. The ten-letter page displays three reference tables computed over the 3–10 letter baseline corpus: (a) letter frequency (26 rows, sortable); (b) top-100 bigram frequency (flat sortable list); (c) two side-by-side top-50 ranked tables for start and end trigrams.
-3. The ten-letter page displays three top-50 rankings of ten-letter words, each ranked by one score using baseline per-occurrence rates: letter-coverage (Σ f over distinct letters), bigram (Σ f over 9 consecutive bigrams), start+end trigram. All sortable; each includes a transparency column explaining the word's score.
+2. The ten-letter page displays four reference table sections computed over the 3–10 letter baseline corpus: (a) letter frequency (26 rows, sortable); (b) top-100 bigram frequency (flat sortable list); (c) two side-by-side top-50 ranked tables for start and end trigrams; (d) two side-by-side 26-row sortable tables for first-letter frequency and last-letter frequency.
+3. The ten-letter page displays four top-50 rankings of ten-letter words, each ranked by one score using baseline per-occurrence rates: letter-coverage (Σ f over distinct letters), bigram (Σ f over 9 consecutive bigrams), start+end trigram, and positional first+last (f_first(w[0]) + f_last(w[-1]), with both contributing even when w[0] == w[-1]). All sortable; each includes a transparency column explaining the word's score.
 4. `pyproject.toml` pins `zensical>=0.0.33`; the existing five-letter page renders correctly after the bump; dark/light toggle and instant navigation still work.
 5. Two new data files are committed: `data/words_10.txt` (10-letter words) and `data/words_3_to_10.txt` (3–10 letter baseline corpus), each filtered from dwyl/english-words to lowercase a–z only.
 6. Scoring functions live in a new `letterfreq/scoring.py` pure module, tested with hand-checked inputs verifying each formula.
@@ -39,6 +39,8 @@ The design is done when:
 - **ten-letter-page.AC3.2 Success:** `letter_score("abcdefghij", rates)` returns `sum(rates[l] for l in "abcdefghij")`.
 - **ten-letter-page.AC3.3 Success:** `bigram_score` on a 10-letter word with controlled rates returns the sum of the 9 consecutive-bigram rates.
 - **ten-letter-page.AC3.4 Success:** `trigram_score("abcdefghij", start_rates, end_rates)` returns `start_rates["abc"] + end_rates["hij"]`.
+- **ten-letter-page.AC3.5 Success:** `positional_endpoint_score("abcdefghij", first_rates, last_rates)` returns `first_rates["a"] + last_rates["j"]`.
+- **ten-letter-page.AC3.6 Success:** `positional_endpoint_score("aaaaaaaaaa", first_rates, last_rates)` returns `first_rates["a"] + last_rates["a"]` (both endpoint terms contribute even when w[0] == w[-1] — no distinct cap, distinguishes this score from `letter_score`).
 
 ### ten-letter-page.AC4: Ranking ordering and tie-break
 - **ten-letter-page.AC4.1 Success:** Two words with identical scores are returned in alphabetical order.
@@ -49,13 +51,15 @@ The design is done when:
 - **ten-letter-page.AC5.1 Success:** Letter-frequency table has 26 rows.
 - **ten-letter-page.AC5.2 Success:** Bigram top-100 table has exactly 100 rows.
 - **ten-letter-page.AC5.3 Success:** Start- and end-trigram tables have 50 rows each, side-by-side in wide viewport, stacked in narrow viewport.
-- **ten-letter-page.AC5.4 Success:** All three reference tables expose sortable column headers (`<th class="sortable">`) and respond to click-to-sort.
+- **ten-letter-page.AC5.4 Success:** All four reference table sections expose sortable column headers (`<th class="sortable">`) and respond to click-to-sort.
+- **ten-letter-page.AC5.5 Success:** First-letter and last-letter frequency tables each have 26 rows, side-by-side in wide viewport, stacked in narrow viewport (same layout pattern as the start/end trigram pair).
 
 ### ten-letter-page.AC6: Ranking tables render correctly on /ten/
 - **ten-letter-page.AC6.1 Success:** Letter-coverage ranking table has 50 rows; transparency column lists the distinct letters of each word, sorted by individual letter rate.
 - **ten-letter-page.AC6.2 Success:** Bigram ranking table has 50 rows; transparency column lists the 3 bigrams from the word that contribute most to its score, where contribution = bigram_rate × number_of_times_that_bigram_appears_in_the_word. (For a word like `statistics` where `st` appears 3 times in 9 consecutive-bigram positions, `st` is listed once with its full contribution.)
 - **ten-letter-page.AC6.3 Success:** Trigram ranking table has 50 rows with separate start-trigram and end-trigram columns.
-- **ten-letter-page.AC6.4 Success:** All three ranking tables sortable.
+- **ten-letter-page.AC6.4 Success:** All four ranking tables sortable.
+- **ten-letter-page.AC6.5 Success:** Positional first+last ranking table has 50 rows with separate first-letter and last-letter columns plus the score; transparency is direct (the two letters shown are the inputs to the score formula).
 
 ### ten-letter-page.AC7: Site structure preserved after Zensical bump
 - **ten-letter-page.AC7.1 Success:** `uv run zensical build --clean` succeeds with `zensical>=0.0.33`.
@@ -68,6 +72,12 @@ The design is done when:
 - **ten-letter-page.AC8.1 Success:** `data/words_10.txt` is non-empty; every line matches `^[a-z]{10}$`.
 - **ten-letter-page.AC8.2 Success:** `data/words_3_to_10.txt` is non-empty; every line matches `^[a-z]{3,10}$`.
 - **ten-letter-page.AC8.3 Success (invariant):** `data/words.txt` (existing 5-letter) is non-empty, line count is at least 15,000, every line matches `^[a-z]{5}$`. This is a structural invariant that catches accidental modification by this refactor while remaining robust to legitimate future regeneration of the file from upstream.
+
+### ten-letter-page.AC10: Baseline first-letter and last-letter frequencies are correct
+- **ten-letter-page.AC10.1 Success:** `first_letter_counts(["cation", "static"])` returns `{c:1, s:1}`.
+- **ten-letter-page.AC10.2 Success:** `last_letter_counts(["cation", "static"])` returns `{n:1, c:1}`.
+- **ten-letter-page.AC10.3 Success:** A 3-letter word `"cat"` contributes `{c:1}` to first-letter counts and `{t:1}` to last-letter counts (no minimum-length filter — every word in the baseline contributes).
+- **ten-letter-page.AC10.4 Success:** `first_letter_counts` and `last_letter_counts` on the actual `words_3_to_10.txt` corpus produce non-zero counts for at least the common starting/ending letters (e.g., 's' present in both, 'e' present as last-letter).
 
 ### ten-letter-page.AC9: Documentation freshness
 - **ten-letter-page.AC9.1 Success:** `CLAUDE.md` references `docs/five/`, `docs/ten/`, `letterfreq/` package, `words_10.txt`, `words_3_to_10.txt`.
@@ -208,6 +218,22 @@ Zensical is bumped from `>=0.0.28` to `>=0.0.33` (5 cumulative bug-fix releases,
 **Alternatives considered:**
 - **Keep five-letter at `/`, add ten-letter at `/ten/`:** Rejected; user explicitly preferred the symmetric structure.
 
+### DR8: Add positional first/last-letter scoring as a fourth ranking dimension (amendment 2026-04-19)
+**Status:** Accepted
+**Confidence:** High
+**Reevaluation triggers:** If the positional first+last ranking turns out to overlap heavily with the start+end trigram ranking (since first letter is contained in the start trigram and last letter in the end trigram), the new score may be redundant and a candidate for removal.
+
+**Decision:** We add a fourth top-50 ranking table on `/ten/` ranked by `positional_endpoint_score(w) = f_first(w[0]) + f_last(w[-1])`, where `f_first` is the rate of each letter appearing as the first letter of any baseline word and `f_last` is the rate of each letter appearing as the last letter. Both terms contribute additively even when `w[0] == w[-1]` (no distinct cap, distinguishing this score from `letter_score`). Two new reference tables (first-letter frequency, last-letter frequency) provide the baseline rates.
+
+**Consequences:**
+- **Enables:** A puzzle-context use case (e.g., the Letroso variable-length-word game) where knowing common starting and ending letters is valuable independently from knowing common starting *trigrams*. The positional score isolates the endpoint-letter signal from the surrounding-letter context. The "even if it's a double" semantics matches the puzzle reality that double-letter words still benefit from each endpoint hint.
+- **Prevents:** Adds two new reference tables and one new ranking table (~30% more page content). The first-letter and last-letter tables share signal with the start- and end-trigram tables (the trigram tables condition on the next two letters; the first/last tables show the marginal). Acknowledged overlap.
+
+**Alternatives considered:**
+- **Augment letter-coverage with positional bonus:** Rejected as it mixes a per-letter aggregate (Σ over distinct letters) with two per-position point evaluations, making the score interpretation murky.
+- **Combine: new ranking AND drop distinct-cap for w[0]/w[-1] in letter-coverage:** Rejected as the most surface area without proportional clarity gain. The new dedicated ranking already surfaces the endpoint-letter signal cleanly.
+- **Defer to a follow-up design plan:** Rejected; the user requested integration into this implementation cycle.
+
 ## Existing Patterns
 
 Investigation found the following patterns in the current codebase that this design follows:
@@ -255,12 +281,14 @@ This design introduces one new pattern: a `letterfreq/` Python package separatin
   - `bigram_counts(words: list[str]) -> dict[str, int]` (all consecutive pairs across all words)
   - `start_trigram_counts(words: list[str], min_length: int = 4) -> dict[str, int]` (first three letters of each word; words shorter than `min_length` are skipped — default 4 per DR3)
   - `end_trigram_counts(words: list[str], min_length: int = 4) -> dict[str, int]` (last three letters of each word; words shorter than `min_length` are skipped — default 4 per DR3)
+  - `first_letter_counts(words: list[str]) -> dict[str, int]` (per DR8 — count of `word[0]` for each word; no minimum length filter, every baseline word contributes)
+  - `last_letter_counts(words: list[str]) -> dict[str, int]` (per DR8 — count of `word[-1]` for each word; no minimum length filter)
   - `to_rates(counts: dict[str, int], total: int) -> dict[str, float]` — helper, count/total
-- `tests/test_reference.py` — hand-checked tiny inputs (e.g., `["cat", "act"]` → letter counts {a:2, c:2, t:2}; bigram counts {ca:1, at:1, ac:1, ct:1}; start trigrams {cat:1, act:1}; end trigrams {cat:1, act:1}).
+- `tests/test_reference.py` — hand-checked tiny inputs (e.g., `["cat", "act"]` → letter counts {a:2, c:2, t:2}; bigram counts {ca:1, at:1, ac:1, ct:1}; start trigrams {cat:1, act:1}; end trigrams {cat:1, act:1}; first-letter counts {c:1, a:1}; last-letter counts {t:1, t:1} → {t:2}).
 
 **Dependencies:** Phase 1.
 
-**Covers:** ten-letter-page.AC1.1, ten-letter-page.AC1.2, ten-letter-page.AC1.3, ten-letter-page.AC1.4 (reference frequency correctness).
+**Covers:** ten-letter-page.AC1.1, ten-letter-page.AC1.2, ten-letter-page.AC1.3, ten-letter-page.AC1.4, ten-letter-page.AC10.1, ten-letter-page.AC10.2, ten-letter-page.AC10.3, ten-letter-page.AC10.4 (reference frequency correctness for letter, bigram, and positional first/last).
 
 **Done when:** Tests in `tests/test_reference.py` pass; counts and rates verified by hand against tiny inputs; module is pure (no I/O, no globals).
 <!-- END_PHASE_2 -->
@@ -274,17 +302,20 @@ This design introduces one new pattern: a `letterfreq/` Python package separatin
   - `letter_score(word: str, letter_rates: dict[str, float]) -> float` — sum over distinct letters.
   - `bigram_score(word: str, bigram_rates: dict[str, float]) -> float` — sum over consecutive bigrams (assumes word length ≥2).
   - `trigram_score(word: str, start_rates: dict[str, float], end_rates: dict[str, float]) -> float` — start[:3] rate plus end[-3:] rate.
+  - `positional_endpoint_score(word: str, first_rates: dict[str, float], last_rates: dict[str, float]) -> float` — `first_rates.get(word[0], 0) + last_rates.get(word[-1], 0)`. Per DR8: both terms contribute even when `word[0] == word[-1]` (no distinct cap).
   - Helper: `top_n_by_score(words, score_fn, n=50) -> list[tuple[str, float]]` — sorted descending, alphabetical tie-break.
 - `tests/test_scoring.py`:
   - `letter_score("aaaaaaaaaa", {"a": 0.1, ...}) == 0.1`
   - `letter_score("abcdefghij", rates) == sum(rates[l] for l in "abcdefghij")`
   - `bigram_score` on a 10-letter word with controlled rates produces the expected sum of 9 terms.
   - `trigram_score` with controlled start/end rates produces the expected sum.
+  - `positional_endpoint_score("abcdefghij", first_rates, last_rates) == first_rates["a"] + last_rates["j"]`.
+  - `positional_endpoint_score("aaaaaaaaaa", first_rates, last_rates) == first_rates["a"] + last_rates["a"]` (no distinct cap; both endpoint terms count).
   - Tie-break: two words with equal scores returned in alphabetical order.
 
 **Dependencies:** Phase 2 (uses the rate dicts produced by `reference.py`).
 
-**Covers:** ten-letter-page.AC2.1, ten-letter-page.AC2.2, ten-letter-page.AC2.3, ten-letter-page.AC2.4, ten-letter-page.AC3.1 (scoring formula correctness; tie-break stability).
+**Covers:** ten-letter-page.AC3.1, ten-letter-page.AC3.2, ten-letter-page.AC3.3, ten-letter-page.AC3.4, ten-letter-page.AC3.5, ten-letter-page.AC3.6, ten-letter-page.AC4.1, ten-letter-page.AC4.2, ten-letter-page.AC4.3 (all four scoring formulas; tie-break stability).
 
 **Done when:** All `test_scoring.py` cases pass; module is pure; functions accept rate dicts as parameters (no implicit baseline).
 <!-- END_PHASE_3 -->
@@ -298,11 +329,12 @@ This design introduces one new pattern: a `letterfreq/` Python package separatin
   - `render_letter_table(rates, counts, word_count) -> str` — 26-row sortable table, columns letter/count/per-word-rate/bar.
   - `render_bigram_table(rates, counts, word_count, top_n=100) -> str` — flat top-100 sortable table.
   - `render_trigram_pair(start_rates, start_counts, end_rates, end_counts, word_count, top_n=50) -> str` — two side-by-side top-50 tables wrapped in a flex/grid container.
-- `docs/css/heatmap.css` — append rules for the new two-column trigram-pair layout (`.trigram-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }` plus narrow-viewport stack-down).
+  - `render_first_last_pair(first_rates, first_counts, last_rates, last_counts, word_count) -> str` — two side-by-side 26-row sortable tables (first-letter frequency, last-letter frequency), reusing the same flex/grid layout class as the trigram pair (per DR8).
+- `docs/css/heatmap.css` — append rules for a generic two-column "side-by-side reference pair" layout (e.g., `.ref-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }` plus narrow-viewport stack-down) used by both `render_trigram_pair` and `render_first_last_pair`.
 
 **Dependencies:** Phase 2 (rates), Phase 1 (CSS file exists).
 
-**Covers:** ten-letter-page.AC4.1, ten-letter-page.AC4.2, ten-letter-page.AC4.3, ten-letter-page.AC4.4 (reference tables render with correct shape and sort behaviour).
+**Covers:** ten-letter-page.AC5.1, ten-letter-page.AC5.2, ten-letter-page.AC5.3, ten-letter-page.AC5.4, ten-letter-page.AC5.5 (reference tables render with correct shape and sort behaviour, including the first/last pair).
 
 **Done when:** Rendering functions called from a smoke test produce well-formed HTML containing the expected number of rows; sortable-table CSS class is applied; manual visual check against `uv run zensical serve` shows the tables look correct on `/ten/` (still empty page logic — content can be inserted manually for the visual check).
 <!-- END_PHASE_4 -->
@@ -316,12 +348,13 @@ This design introduces one new pattern: a `letterfreq/` Python package separatin
   - `render_letter_ranking(words_10, letter_rates, top_n=50) -> str` — columns: rank, word, distinct letters (sorted by individual rate), score.
   - `render_bigram_ranking(words_10, bigram_rates, top_n=50) -> str` — columns: rank, word, top-3 contributing bigrams (by `rate × per-word count`), score.
   - `render_trigram_ranking(words_10, start_rates, end_rates, top_n=50) -> str` — columns: rank, word, start trigram, end trigram, score.
+  - `render_positional_ranking(words_10, first_rates, last_rates, top_n=50) -> str` — columns: rank, word, first letter, last letter, score (per DR8).
 
 **Dependencies:** Phase 3 (scoring), Phase 4 (HTML helper conventions).
 
-**Covers:** ten-letter-page.AC5.1, ten-letter-page.AC5.2, ten-letter-page.AC5.3, ten-letter-page.AC5.4 (ranking tables render with correct columns including transparency; sortable behaviour).
+**Covers:** ten-letter-page.AC6.1, ten-letter-page.AC6.2, ten-letter-page.AC6.3, ten-letter-page.AC6.4, ten-letter-page.AC6.5 (all four ranking tables render with correct columns including transparency; sortable behaviour).
 
-**Done when:** Rendering functions produce well-formed HTML with exactly top_n rows; transparency columns show the expected components (verifiable against a hand-checked example word); all three tables use the `sortable-table` class.
+**Done when:** Rendering functions produce well-formed HTML with exactly top_n rows; transparency columns show the expected components (verifiable against a hand-checked example word); all four tables use the `sortable-table` class.
 <!-- END_PHASE_5 -->
 
 <!-- START_PHASE_6 -->
@@ -332,9 +365,9 @@ This design introduces one new pattern: a `letterfreq/` Python package separatin
 - `main_ten.py`:
   - Load `data/words_10.txt` (10-letter words).
   - Load `data/words_3_to_10.txt` (baseline).
-  - Call `letterfreq.reference` to compute baseline rates.
-  - Call `letterfreq.render` for all six tables (3 reference + 3 ranking).
-  - Compose `docs/ten/index.md` with frontmatter, page title, intro paragraph, two H2 sections ("Baseline frequencies", "Ten-letter words"), and the table blocks.
+  - Call `letterfreq.reference` to compute baseline rates (letter, bigram, start/end trigram, first/last letter).
+  - Call `letterfreq.render` for all reference and ranking tables (4 reference sections + 4 rankings per DR8).
+  - Compose `docs/ten/index.md` with frontmatter, page title, intro paragraph, two H2 sections ("Baseline frequencies", "Ten-letter words"), and the table blocks. The first/last reference pair sits between the trigram pair and the ranking section; the positional ranking is the last of the four ranking tables.
 - `docs/index.md` (landing) — finalise wording with project description and the two links.
 - `pyproject.toml` — add `[project.scripts]` entries if useful; or document running via `uv run python main_ten.py`.
 
