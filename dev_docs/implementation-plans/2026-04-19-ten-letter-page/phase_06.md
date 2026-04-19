@@ -85,38 +85,89 @@ INDEX_MD = REPO_ROOT / "docs" / "ten" / "index.md"
 
 
 def load_words(path: Path) -> list[str]:
-    """Read one-word-per-line corpus file, dropping empty lines."""
-    return [w for w in path.read_text().splitlines() if w]
+    """Read one-word-per-line corpus file; drop empty lines; dedupe (preserve order).
+
+    Defensive dedupe via dict.fromkeys protects ranking from showing the same
+    word twice if the corpus file contains duplicates (Phase 5 deferred
+    concern #3; complementary uniqueness assertion lives in Phase 7).
+    """
+    return list(dict.fromkeys(w for w in path.read_text().splitlines() if w))
+
+
+def _count_baseline(baseline: list[str]) -> dict[str, dict[str, int]]:
+    """Compute all six baseline count dicts from the corpus.
+
+    Returned keys: 'letter', 'bigram', 'start_trigram', 'end_trigram',
+    'first_letter', 'last_letter'. Pure; suitable for direct testing.
+    """
+    return {
+        "letter": letter_counts(baseline),
+        "bigram": bigram_counts(baseline),
+        "start_trigram": start_trigram_counts(baseline),  # default min_length=4
+        "end_trigram": end_trigram_counts(baseline),
+        "first_letter": first_letter_counts(baseline),
+        "last_letter": last_letter_counts(baseline),
+    }
+
+
+def _compute_rates(
+    counts: dict[str, dict[str, int]],
+    word_total: int,
+) -> dict[str, dict[str, float]]:
+    """Convert count dicts into rate dicts using the production denominator choices.
+
+    Per-occurrence rate (sum-of-counts denominator) for letter / bigram /
+    start_trigram / end_trigram. Per-word rate (`word_total` denominator) for
+    first_letter / last_letter (per DR8: every baseline word contributes
+    exactly one first and one last letter).
+
+    Each returned rate dict sums to 1.0 by construction. Factoring this out
+    of generate_page lets tests assert the production-path denominator
+    choices rather than re-deriving them in test setup (Phase 5 deferred
+    concern #1; closes the regression-guard gap from Phase 2).
+    """
+    return {
+        "letter": to_rates(counts["letter"], sum(counts["letter"].values())),
+        "bigram": to_rates(counts["bigram"], sum(counts["bigram"].values())),
+        # Trigram totals: only words of length >= 4 contributed (default
+        # min_length=4 per DR3). Sum-of-counts equals the count of length-≥4
+        # words. Critical: using `word_total` here would systematically
+        # deflate trigram rates by the proportion of length-3 words.
+        "start_trigram": to_rates(
+            counts["start_trigram"], sum(counts["start_trigram"].values())
+        ),
+        "end_trigram": to_rates(
+            counts["end_trigram"], sum(counts["end_trigram"].values())
+        ),
+        "first_letter": to_rates(counts["first_letter"], word_total),
+        "last_letter": to_rates(counts["last_letter"], word_total),
+    }
 
 
 def generate_page(words_10: list[str], baseline: list[str]) -> str:
     """Compose the full docs/ten/index.md content."""
     # --- Counts and rates over baseline -----------------------------------
-    letter_c = letter_counts(baseline)
-    bigram_c = bigram_counts(baseline)
-    start_c = start_trigram_counts(baseline)  # default min_length=4
-    end_c = end_trigram_counts(baseline)
-    first_c = first_letter_counts(baseline)
-    last_c = last_letter_counts(baseline)
-
-    letter_total = sum(letter_c.values())
-    bigram_total = sum(bigram_c.values())
+    counts = _count_baseline(baseline)
     word_total = len(baseline)
-    # Trigram totals: only words of length >= 4 contributed (start_trigram_counts
-    # / end_trigram_counts use default min_length=4 per DR3). Each contributing
-    # word produced exactly one start trigram and one end trigram, so the
-    # denominator is the count of trigrams emitted, which equals the number of
-    # baseline words with length >= 4.
-    trigram_word_total = sum(start_c.values())  # == sum(end_c.values())
+    rates = _compute_rates(counts, word_total)
 
-    letter_r = to_rates(letter_c, letter_total)
-    bigram_r = to_rates(bigram_c, bigram_total)
-    start_r = to_rates(start_c, trigram_word_total)
-    end_r = to_rates(end_c, trigram_word_total)
-    # first/last letter counts include every baseline word (no min_length
-    # filter per DR8), so word_total is the correct denominator.
-    first_r = to_rates(first_c, word_total)
-    last_r = to_rates(last_c, word_total)
+    letter_c = counts["letter"]
+    bigram_c = counts["bigram"]
+    start_c = counts["start_trigram"]
+    end_c = counts["end_trigram"]
+    first_c = counts["first_letter"]
+    last_c = counts["last_letter"]
+
+    letter_r = rates["letter"]
+    bigram_r = rates["bigram"]
+    start_r = rates["start_trigram"]
+    end_r = rates["end_trigram"]
+    first_r = rates["first_letter"]
+    last_r = rates["last_letter"]
+
+    # trigram_word_total only used as the `word_count` argument to
+    # render_trigram_pair (drives its "Per word" column).
+    trigram_word_total = sum(start_c.values())  # == sum(end_c.values())
 
     # --- Reference tables --------------------------------------------------
     # The `word_count` argument to each renderer drives the "Per word" rate
@@ -159,6 +210,13 @@ def generate_page(words_10: list[str], baseline: list[str]) -> str:
         "### First and last letters\n\n"
         f"{ref_first_last}\n\n"
         "## Ten-letter words\n\n"
+        "Note: the reference tables above show **per-word rates** (fraction "
+        "of baseline words containing each item). The scoring formulas below "
+        "use **per-occurrence rates** (fraction of all letter / bigram / "
+        "trigram occurrences across the baseline). Same baseline corpus, "
+        "different denominators — so a letter like `e` appears with two "
+        "different numbers across the page. Both are correct for their "
+        "respective question.\n\n"
         "### Top 50 by letter coverage\n\n"
         "Score = sum of baseline rates over the **distinct** letters in the word. "
         "Words that pack many high-frequency letters score highest; repeats add "
@@ -197,14 +255,16 @@ if __name__ == "__main__":
 ```
 
 **Implementation notes:**
-- The `to_rates` totals are chosen so that each rate dict sums to 1.0:
-  - `letter_total = sum(letter_c.values())` — per-letter rates sum to 1.0.
-  - `bigram_total = sum(bigram_c.values())` — per-bigram rates sum to 1.0.
-  - `trigram_word_total = sum(start_c.values())` — only baseline words of length ≥ 4 contributed to start/end trigram counts (per DR3's default `min_length=4`), so the denominator must match. Equivalent to `sum(1 for w in baseline if len(w) >= 4)`. **Critical:** using `len(baseline)` here would systematically deflate trigram rates by the proportion of length-3 words.
-  - `word_total = len(baseline)` — used for first/last letter rates because per DR8 every baseline word contributes exactly one first letter and one last letter (no minimum-length filter).
+- The denominator choices are encapsulated in `_compute_rates` so each rate dict sums to 1.0:
+  - `'letter'`, `'bigram'` → `sum(counts.values())` (per-occurrence rate).
+  - `'start_trigram'`, `'end_trigram'` → `sum(counts.values())` (equals count of length-≥4 words per DR3's default `min_length=4`). **Critical:** using `word_total` here would systematically deflate trigram rates.
+  - `'first_letter'`, `'last_letter'` → `word_total` (per DR8 every baseline word contributes exactly one first and one last letter).
+- `_count_baseline` and `_compute_rates` are factored out so Task 3 can assert directly against the production-path rate dicts (closes the Phase 5 deferred-concern #1 regression-guard gap).
+- `load_words` deduplicates via `dict.fromkeys` (Phase 5 deferred concern #3). Phase 7 will add a complementary corpus-file uniqueness assertion.
+- `trigram_word_total` is retained in `generate_page` only as the `word_count` argument to `render_trigram_pair` (drives the displayed "Per word" column).
 - All four scoring metrics end up in the same probability-magnitude range.
 - Module-level constants mirror the pattern in existing `main.py`.
-- `generate_page` is pure (no I/O), making it directly testable via Task 2.
+- `generate_page` is pure (no I/O), making it directly testable via Task 3.
 
 **No commit yet** — wait for Task 2 verification.
 <!-- END_TASK_1 -->
@@ -258,13 +318,13 @@ find site \( -path '*dev_docs*' -o -path '*design-plans*' -o -path '*architectur
 
 Expected: no output.
 
-Run the full pytest suite:
+Run the full pytest suite (`python -m pytest` bypasses rtk's bare-`pytest` interception which returns a false "no tests collected"):
 
 ```bash
-uv run pytest -q
+uv run python -m pytest -q
 ```
 
-Expected: all tests pass (test_frequencies, test_reference, test_scoring, test_render_reference, test_render_ranking).
+Expected: all tests pass — Phase 1–5 baseline (79 tests) plus the new `test_main_ten.py` from Task 3 (9 tests) → **88 tests total**.
 
 **Visual sanity check (manual):**
 
@@ -283,6 +343,7 @@ Open http://localhost:8000 and verify:
    - Start/end trigram pair: side-by-side at desktop width, stacked at mobile width.
    - First/last letter pair: 26 rows each side, side-by-side at desktop width.
    - Four ranking tables: 50 rows each. Spot-check: a high-letter-coverage word should contain many of {e, t, a, o, i, n}. Doubled-endpoint check: scan the positional ranking for any 10-letter word whose first and last letters match (if one is in the corpus); both letters should still contribute to its score, per DR8 (no distinct cap on endpoints).
+   - Bigram transparency: Task 3's `test_topN_bigram_transparency_covers_majority` enforces the 50% rule (top-N contributors must cover ≥50% of total bigram score for every top-10 word, where N = `BIGRAM_TRANSPARENCY_CAP`). If that test fails, bump the constant in `letterfreq/render.py` (a one-line change; the test re-reads it) and re-run `main_ten.py` + `zensical build` before completing the visual check. No manual vibes-judgment needed.
 4. **Theme toggle:** Light/dark mode switch works on all three pages.
 5. **Instant navigation:** Clicking nav links between pages doesn't full-reload (URL bar updates without flicker; `navigation.instant` working).
 
@@ -295,40 +356,77 @@ git commit -m "feat: main_ten.py — generate populated /ten/ page (4 reference 
 <!-- END_TASK_2 -->
 
 <!-- START_TASK_3 -->
-### Task 3: Add `tests/test_main_ten.py` — production-path rates-sum-to-1.0 assertion
+### Task 3: Add `tests/test_main_ten.py` — production-path tests
 
-**Verifies:** Closes the gap noted by peer review M2 — the helper function `to_rates` is unit-tested in Phase 2, but no test exercises that the actual baseline rate dicts produced inside `generate_page` sum to 1.0 with the chosen denominators (the Critical bug in earlier review was about exactly this denominator choice).
+**Verifies three things:**
+1. The actual rate dicts produced inside `generate_page` (via `_compute_rates`) sum to 1.0 with the chosen denominators — closes the Phase 5 deferred concern #1 regression-guard gap by calling the production helper rather than re-deriving rates inside the test.
+2. `load_words` deduplicates — Phase 5 deferred concern #3 (defensive in-process guard against duplicate corpus entries).
+3. The bigram top-N transparency rule holds for all top-10 ranked words — Phase 5 deferred concern #2. Hard assertion: if any top-10 word's top-N bigram contributions sum to less than 50% of its total bigram score, the test fails and the implementer must bump the cap. **Single source of truth:** the cap lives as `BIGRAM_TRANSPARENCY_CAP` in `letterfreq.render`; the test imports it. Bumping the cap is a one-line edit; both `render_bigram_ranking` and the test pick up the new value automatically.
+
+**Pre-Task 3 prep (refactor `letterfreq/render.py` to hoist the cap):**
+
+Before creating the test file, edit `letterfreq/render.py`:
+
+1. Add a module-level constant near the top (after imports, before any function definitions):
+   ```python
+   # The number of top-contributing bigrams to display in render_bigram_ranking's
+   # "Top contributors" column. Acts as a transparency cap. Bump if Task 3's
+   # test_topN_bigram_transparency_covers_majority shows top-N covers <50% of
+   # total bigram score for any top-10 ranked word.
+   BIGRAM_TRANSPARENCY_CAP: int = 3
+   ```
+2. In `render_bigram_ranking`, change the slice from `[:3]` to `[:BIGRAM_TRANSPARENCY_CAP]`:
+   ```python
+   contribs = sorted(
+       (
+           (bg, bigram_rates.get(bg, 0.0) * cnt)
+           for bg, cnt in per_word_bigrams.items()
+       ),
+       key=lambda kv: (-kv[1], kv[0]),
+   )[:BIGRAM_TRANSPARENCY_CAP]  # was: [:3]
+   ```
+
+This refactor is a no-behaviour-change at the default value of 3 — `render_bigram_ranking` produces identical output. Verify by running `uv run python main_ten.py` and `diff`-ing the new `docs/ten/index.md` against the previous one (should be byte-identical).
+
+Commit this refactor first, BEFORE creating the test file:
+```bash
+git add letterfreq/render.py
+git commit -m "refactor(render): hoist bigram transparency cap to BIGRAM_TRANSPARENCY_CAP"
+```
 
 **Files:**
+- Modify: `/home/brian/llm/letterfreq/letterfreq/render.py` (constant + slice swap, committed first)
 - Create: `/home/brian/llm/letterfreq/tests/test_main_ten.py`
 
 **Implementation:**
 
 ```python
-"""Production-path tests for main_ten.generate_page.
+"""Production-path tests for main_ten.generate_page and its helpers.
 
-Asserts that all six baseline rate dicts produced inside generate_page sum
-to 1.0 with the denominators chosen in Phase 6 Task 1. This is a regression
-guard against the trigram-denominator bug surfaced during plan review.
+Closes three Phase 5 deferred concerns:
+  1. Rate dicts produced by _compute_rates sum to 1.0 (denominator regression
+     guard — calls the production helper, not a re-derivation).
+  2. load_words deduplicates input lines.
+  3. Top-N bigram transparency covers ≥50% of total score for every top-10
+     ranked word, where N is the production cap BIGRAM_TRANSPARENCY_CAP from
+     letterfreq.render. Single source of truth: bumping the constant in
+     render.py changes both the rendered cell width and what this test asserts.
 """
 
 from __future__ import annotations
 
+from collections import Counter
 from pathlib import Path
 
 import pytest
 
-# We test generate_page indirectly by recomputing the same rate dicts
-# the function builds internally. (Refactoring generate_page to expose
-# the rate dicts as a return value would be cleaner but is out of scope.)
-from letterfreq.reference import (
-    bigram_counts,
-    end_trigram_counts,
-    first_letter_counts,
-    last_letter_counts,
-    letter_counts,
-    start_trigram_counts,
-    to_rates,
+from letterfreq.render import BIGRAM_TRANSPARENCY_CAP
+from letterfreq.scoring import bigram_score, top_n_by_score
+from main_ten import (
+    WORDS_10_FILE,
+    _compute_rates,
+    _count_baseline,
+    load_words,
 )
 
 BASELINE_PATH = Path(__file__).parent.parent / "data" / "words_3_to_10.txt"
@@ -341,56 +439,133 @@ def baseline_words() -> list[str]:
     return [w for w in BASELINE_PATH.read_text().splitlines() if w]
 
 
-def test_letter_rates_sum_to_one(baseline_words: list[str]) -> None:
-    counts = letter_counts(baseline_words)
-    rates = to_rates(counts, sum(counts.values()))
-    assert sum(rates.values()) == pytest.approx(1.0, rel=1e-9)
+@pytest.fixture(scope="module")
+def production_rates(baseline_words: list[str]) -> dict[str, dict[str, float]]:
+    """The exact rate dicts generate_page consumes, via the production helper."""
+    return _compute_rates(_count_baseline(baseline_words), len(baseline_words))
 
 
-def test_bigram_rates_sum_to_one(baseline_words: list[str]) -> None:
-    counts = bigram_counts(baseline_words)
-    rates = to_rates(counts, sum(counts.values()))
-    assert sum(rates.values()) == pytest.approx(1.0, rel=1e-9)
+# --- Concern #1: rate dicts sum to 1.0 (production path) -----------------------
 
 
-def test_start_trigram_rates_sum_to_one(baseline_words: list[str]) -> None:
-    """Regression guard: denominator must be sum-of-counts, NOT len(baseline_words)."""
-    counts = start_trigram_counts(baseline_words)  # default min_length=4
-    rates = to_rates(counts, sum(counts.values()))
-    assert sum(rates.values()) == pytest.approx(1.0, rel=1e-9)
+@pytest.mark.parametrize(
+    "key",
+    [
+        "letter",
+        "bigram",
+        "start_trigram",
+        "end_trigram",
+        "first_letter",
+        "last_letter",
+    ],
+)
+def test_production_rates_sum_to_one(
+    production_rates: dict[str, dict[str, float]], key: str
+) -> None:
+    """Regression guard: every rate dict generate_page uses must sum to 1.0.
+
+    The classic denominator bug surfaced during plan review was using
+    `len(baseline)` instead of `sum(start_trigram_counts.values())` for the
+    trigram rate, which would systematically deflate trigram rates by the
+    proportion of length-3 words. This parametrised test catches any future
+    occurrence by exercising the production helper directly.
+    """
+    rates = production_rates[key]
+    assert sum(rates.values()) == pytest.approx(1.0, rel=1e-9), (
+        f"{key} rates sum to {sum(rates.values())!r}, not 1.0 — "
+        "denominator choice in _compute_rates is wrong."
+    )
 
 
-def test_end_trigram_rates_sum_to_one(baseline_words: list[str]) -> None:
-    counts = end_trigram_counts(baseline_words)
-    rates = to_rates(counts, sum(counts.values()))
-    assert sum(rates.values()) == pytest.approx(1.0, rel=1e-9)
+# --- Concern #3: load_words deduplicates --------------------------------------
 
 
-def test_first_letter_rates_sum_to_one(baseline_words: list[str]) -> None:
-    counts = first_letter_counts(baseline_words)
-    rates = to_rates(counts, len(baseline_words))
-    assert sum(rates.values()) == pytest.approx(1.0, rel=1e-9)
+def test_load_words_deduplicates_preserving_order(tmp_path: Path) -> None:
+    """If the corpus file ever contains duplicates, ranking must not show the
+    same word twice. Order of first occurrence is preserved.
+    """
+    p = tmp_path / "dups.txt"
+    p.write_text("apple\nbanana\napple\ncherry\nbanana\napple\n")
+    assert load_words(p) == ["apple", "banana", "cherry"]
 
 
-def test_last_letter_rates_sum_to_one(baseline_words: list[str]) -> None:
-    counts = last_letter_counts(baseline_words)
-    rates = to_rates(counts, len(baseline_words))
-    assert sum(rates.values()) == pytest.approx(1.0, rel=1e-9)
+def test_load_words_drops_empty_lines(tmp_path: Path) -> None:
+    p = tmp_path / "spaced.txt"
+    p.write_text("a\n\nb\n\n\nc\n")
+    assert load_words(p) == ["a", "b", "c"]
+
+
+# --- Concern #2: bigram top-3 transparency covers majority --------------------
+
+
+def test_topN_bigram_transparency_covers_majority(
+    baseline_words: list[str],
+    production_rates: dict[str, dict[str, float]],
+) -> None:
+    """For every top-10 ranked ten-letter word, the top-N bigram contributions
+    must sum to ≥50% of that word's total bigram score, where
+    N = letterfreq.render.BIGRAM_TRANSPARENCY_CAP (the same cap the rendered
+    "Top contributors" cell uses). If this fails, bump the constant in
+    letterfreq/render.py and re-render — the test will pick up the new value
+    automatically because it imports the constant rather than hard-coding it.
+    """
+    if not WORDS_10_FILE.exists():
+        pytest.skip(f"ten-letter corpus not present: {WORDS_10_FILE}")
+    words_10 = load_words(WORDS_10_FILE)
+    bigram_r = production_rates["bigram"]
+    cap = BIGRAM_TRANSPARENCY_CAP
+
+    def score(word: str) -> float:
+        return bigram_score(word, bigram_r)
+
+    top10 = top_n_by_score(words_10, score, n=10)
+    failures: list[str] = []
+    for word, total in top10:
+        if total <= 0:
+            continue  # nothing to attribute
+        per_word_bigrams = Counter(word[i : i + 2] for i in range(len(word) - 1))
+        contribs = sorted(
+            (bigram_r.get(bg, 0.0) * cnt for bg, cnt in per_word_bigrams.items()),
+            reverse=True,
+        )
+        topN_sum = sum(contribs[:cap])
+        ratio = topN_sum / total
+        if ratio < 0.5:
+            failures.append(
+                f"  {word!r}: top-{cap} covers {ratio:.1%} "
+                f"({topN_sum:.4f} / {total:.4f})"
+            )
+    assert not failures, (
+        f"Top-{cap} bigram transparency hides more than half of the score for "
+        "the following top-10 ranked words. Bump BIGRAM_TRANSPARENCY_CAP in "
+        "letterfreq/render.py (e.g., from 3 to 5) and re-run main_ten.py + "
+        "zensical build. The test re-reads the constant on next run.\n"
+        + "\n".join(failures)
+    )
 ```
 
 **Verification:**
 
 ```bash
-uv run pytest tests/test_main_ten.py -v
+uv run python -m pytest tests/test_main_ten.py -v
 ```
 
-Expected: 6 tests pass.
+Expected: 9 tests pass (6 parametrised `test_production_rates_sum_to_one[...]`, 2 `load_words` tests, 1 `test_topN_bigram_transparency_covers_majority`).
+
+**If `test_topN_bigram_transparency_covers_majority` fails:** edit `letterfreq/render.py` and change `BIGRAM_TRANSPARENCY_CAP = 3` to `BIGRAM_TRANSPARENCY_CAP = 5` (a single-line constant change — both `render_bigram_ranking` and the test pick up the new value because both import the constant). Re-run `uv run python main_ten.py` and `uv run zensical build --clean`. Re-run the test. Commit the cap change as a separate commit before the test commit:
+
+```bash
+git add letterfreq/render.py docs/ten/index.md
+git commit -m "fix(render): bump BIGRAM_TRANSPARENCY_CAP from 3 to 5 (top-3 covered <50% for some top-10 words)"
+```
+
+If even cap=5 fails, STOP — the data does not support meaningful concentration-based transparency at the top-10 ranks; needs design discussion (don't keep bumping the cap toward 9).
 
 **Commit:**
 
 ```bash
 git add tests/test_main_ten.py
-git commit -m "test: assert all six baseline rate dicts in generate_page sum to 1.0"
+git commit -m "test: production-path rate sums + load_words dedupe + top-3 bigram transparency"
 ```
 <!-- END_TASK_3 -->
 

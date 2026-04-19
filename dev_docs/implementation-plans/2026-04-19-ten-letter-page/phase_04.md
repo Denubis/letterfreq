@@ -55,7 +55,7 @@ Append the following block at the end of `docs/css/heatmap.css`:
   min-width: 0; /* allow children to shrink within their grid cell */
 }
 
-@media (max-width: 720px) {
+@media (max-width: 768px) {
   .ref-pair {
     grid-template-columns: 1fr;
   }
@@ -68,7 +68,7 @@ Append the following block at the end of `docs/css/heatmap.css`:
 grep -n "ref-pair" docs/css/heatmap.css
 ```
 
-Expected: shows the new rules (4 occurrences in the appended block).
+Expected: shows the new rules (3 occurrences of the `ref-pair` selector token in the appended block).
 
 ```bash
 uv run zensical build --clean

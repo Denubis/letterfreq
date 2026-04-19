@@ -212,3 +212,21 @@ details {
   color: var(--md-default-fg-color--light, #666);
   font-size: 0.8em;
 }
+
+/* --- Side-by-side reference-table pair (used by start/end trigrams and first/last letters on /ten/) --- */
+.ref-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin: 1rem 0;
+}
+
+.ref-pair > * {
+  min-width: 0; /* allow children to shrink within their grid cell */
+}
+
+@media (max-width: 768px) {
+  .ref-pair {
+    grid-template-columns: 1fr;
+  }
+}
