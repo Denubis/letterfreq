@@ -354,17 +354,19 @@ def render_trigram_ranking(
 
 def render_positional_ranking(
     words_10: list[str],
+    letter_rates: dict[str, float],
     first_rates: dict[str, float],
     last_rates: dict[str, float],
     top_n: int = 50,
 ) -> str:
-    """Top-N ten-letter words by positional_endpoint_score (first + last).
+    """Top-N ten-letter words by positional_endpoint_score.
 
-    Columns: Rank | Word | First | Last | Score.
-    Per DR8: both terms count even when first == last.
+    Score = letter_score(w) + first_rate[w[0]] + last_rate[w[-1]].
+    Columns: Rank | Word | First | Last | Score. Both positional terms count
+    even when first == last (no endpoint distinct cap).
     """
     def score_fn(w: str) -> float:
-        return positional_endpoint_score(w, first_rates, last_rates)
+        return positional_endpoint_score(w, letter_rates, first_rates, last_rates)
 
     ranked = top_n_by_score(words_10, score_fn, n=top_n)
     rows: list[str] = []

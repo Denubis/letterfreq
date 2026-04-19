@@ -82,7 +82,9 @@ def generate_page(words_10: list[str], baseline: list[str]) -> str:
     rank_letter = render_letter_ranking(words_10, letter_r, top_n=50)
     rank_bigram = render_bigram_ranking(words_10, bigram_r, top_n=50)
     rank_trigram = render_trigram_ranking(words_10, start_r, end_r, top_n=50)
-    rank_positional = render_positional_ranking(words_10, first_r, last_r, top_n=50)
+    rank_positional = render_positional_ranking(
+        words_10, letter_r, first_r, last_r, top_n=50
+    )
 
     return (
         "---\n"

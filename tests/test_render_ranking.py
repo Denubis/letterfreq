@@ -113,27 +113,34 @@ def test_trigram_ranking_shows_separate_start_end_columns() -> None:
 
 # AC6.5
 def test_positional_ranking_has_top_50_rows() -> None:
+    letter_rates = {ch: 1 / 26 for ch in string.ascii_lowercase}
     first_rates = {ch: 1 / 26 for ch in string.ascii_lowercase}
     last_rates = {ch: 1 / 26 for ch in string.ascii_lowercase}
-    html = render_positional_ranking(_ten_letter_words(), first_rates, last_rates, top_n=50)
+    html = render_positional_ranking(
+        _ten_letter_words(), letter_rates, first_rates, last_rates, top_n=50
+    )
     assert html.count("<tr>") == 51
 
 
 def test_positional_ranking_shows_separate_first_last_columns() -> None:
+    letter_rates = {ch: 0.1 for ch in string.ascii_lowercase}
     html = render_positional_ranking(
-        ["abcdefghij"], {"a": 0.1}, {"j": 0.2}, top_n=1
+        ["abcdefghij"], letter_rates, {"a": 0.1}, {"j": 0.2}, top_n=1
     )
     assert "First" in html
     assert "Last" in html
 
 
 def test_positional_ranking_doubled_endpoint_word() -> None:
-    """A word where w[0] == w[-1] should still get both contributions."""
+    """A word where w[0] == w[-1] still receives both positional bonuses."""
+    letter_rates = {"a": 1.0}
     first_rates = {"a": 0.5}
     last_rates = {"a": 0.3}
-    html = render_positional_ranking(["aaaaaaaaaa"], first_rates, last_rates, top_n=1)
-    # Score should be 0.5 + 0.3 = 0.8, rendered as 0.8000
-    assert "0.8000" in html
+    html = render_positional_ranking(
+        ["aaaaaaaaaa"], letter_rates, first_rates, last_rates, top_n=1
+    )
+    # Score = letter_score('aaaa...')=1.0 + first['a']=0.5 + last['a']=0.3 = 1.8
+    assert "1.8000" in html
 
 
 # ---- AC6.4: All ranking tables sortable ---------------------------------------
@@ -148,7 +155,7 @@ def test_all_ranking_tables_have_sortable_class() -> None:
         render_letter_ranking(words, rates, top_n=1),
         render_bigram_ranking(words, bigram_rates, top_n=1),
         render_trigram_ranking(words, start_rates, end_rates, top_n=1),
-        render_positional_ranking(words, {"a": 0.1}, {"j": 0.1}, top_n=1),
+        render_positional_ranking(words, rates, {"a": 0.1}, {"j": 0.1}, top_n=1),
     ]
     for html in htmls:
         assert 'class="sortable"' in html

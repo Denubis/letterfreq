@@ -24,14 +24,14 @@ def letter_score(word: str, letter_rates: dict[str, float]) -> float:
 
 
 def bigram_score(word: str, bigram_rates: dict[str, float]) -> float:
-    """Sum baseline bigram rates over each of the consecutive bigrams in `word`.
+    """Sum baseline bigram rates over the DISTINCT bigrams in `word`.
 
-    Includes repeats: if a bigram appears multiple times in `word`, its rate
-    is added that many times. (Distinct from letter_score's distinct cap.)
+    Parallels `letter_score`'s distinct cap: repeated bigrams do not increase
+    the score. 'statistics' has bigrams st, ta, at, ti, is, st, ti, ic, cs —
+    distinct set is {st, ta, at, ti, is, ic, cs}, so seven rates are summed.
     """
-    return sum(
-        bigram_rates.get(word[i : i + 2], 0.0) for i in range(len(word) - 1)
-    )
+    distinct_bigrams = {word[i : i + 2] for i in range(len(word) - 1)}
+    return sum(bigram_rates.get(bg, 0.0) for bg in distinct_bigrams)
 
 
 def trigram_score(
@@ -55,19 +55,25 @@ def trigram_score(
 
 def positional_endpoint_score(
     word: str,
+    letter_rates: dict[str, float],
     first_rates: dict[str, float],
     last_rates: dict[str, float],
 ) -> float:
-    """Sum the first-letter rate and the last-letter rate of `word`.
+    """Letter-coverage score plus positional bonuses for start and end letters.
 
-    Per DR8: both terms contribute even when `word[0] == word[-1]` (no distinct
-    cap, distinguishing this score from `letter_score`).
+    Score = letter_score(word) + first_rates[word[0]] + last_rates[word[-1]].
+    Rewards words that combine diverse common letters (via letter_score) with
+    common positional endpoints — both terms count even when word[0] == word[-1].
 
     Raises ValueError on empty word.
     """
     if not word:
         raise ValueError("positional_endpoint_score requires a non-empty word")
-    return first_rates.get(word[0], 0.0) + last_rates.get(word[-1], 0.0)
+    return (
+        letter_score(word, letter_rates)
+        + first_rates.get(word[0], 0.0)
+        + last_rates.get(word[-1], 0.0)
+    )
 
 
 # ---- Generic top-N helper -----------------------------------------------------

@@ -73,12 +73,24 @@ def test_bigram_score_handcheck_specific_pairs() -> None:
     assert bigram_score("abcd", rates) == pytest.approx(0.1 + 0.2 + 0.3)
 
 
-def test_bigram_score_repeated_bigram_counted_each_time() -> None:
+def test_bigram_score_distinct_cap_on_repeats() -> None:
     rates = {"st": 0.1, "ta": 0.05, "at": 0.05, "ti": 0.05, "is": 0.05, "ic": 0.05, "cs": 0.05}
     # 'statistics' has bigrams: st, ta, at, ti, is, st, ti, ic, cs
-    # st appears twice, ti appears twice — both counted twice
-    expected = 0.1 + 0.05 + 0.05 + 0.05 + 0.05 + 0.1 + 0.05 + 0.05 + 0.05
+    # Distinct set is {st, ta, at, ti, is, ic, cs} — 7 rates, each counted once.
+    expected = 0.1 + 0.05 + 0.05 + 0.05 + 0.05 + 0.05 + 0.05
     assert bigram_score("statistics", rates) == pytest.approx(expected)
+
+
+def test_bigram_score_uniform_rates_all_distinct_bigrams() -> None:
+    rates = two_letter_bigram_rates(0.05)
+    # 'abcdefghij' has 9 consecutive, all distinct → 9 * 0.05 = 0.45
+    assert bigram_score("abcdefghij", rates) == pytest.approx(9 * 0.05)
+
+
+def test_bigram_score_single_repeated_bigram_counted_once() -> None:
+    # 'ababababab' has only one distinct bigram ('ab' + 'ba' alternating), so {ab, ba}.
+    rates = {"ab": 0.1, "ba": 0.2}
+    assert bigram_score("ababababab", rates) == pytest.approx(0.3)
 
 
 # ---- trigram_score ------------------------------------------------------------
@@ -97,22 +109,31 @@ def test_trigram_score_unknown_trigram_treated_as_zero() -> None:
 # ---- positional_endpoint_score ------------------------------------------------
 
 # AC3.5
-def test_positional_endpoint_score_distinct_endpoints() -> None:
-    first_rates = {"a": 0.1, "b": 0.05}
-    last_rates = {"j": 0.2, "k": 0.05}
-    assert positional_endpoint_score("abcdefghij", first_rates, last_rates) == pytest.approx(0.3)
+def test_positional_endpoint_score_coverage_plus_endpoints() -> None:
+    letter_rates = alpha_rates(0.1)
+    first_rates = {"a": 0.5, "b": 0.05}
+    last_rates = {"j": 0.3, "k": 0.05}
+    # 'abcdefghij' has 10 distinct letters → letter_score = 1.0
+    # + first['a']=0.5 + last['j']=0.3 = 1.8
+    assert positional_endpoint_score(
+        "abcdefghij", letter_rates, first_rates, last_rates
+    ) == pytest.approx(1.8)
 
 
 # AC3.6
-def test_positional_endpoint_score_no_distinct_cap_when_endpoints_equal() -> None:
+def test_positional_endpoint_score_no_cap_when_endpoints_equal() -> None:
+    letter_rates = {"a": 1.0}
     first_rates = {"a": 0.1}
     last_rates = {"a": 0.2}
-    # Both terms contribute even though word[0] == word[-1]
-    assert positional_endpoint_score("aaaaaaaaaa", first_rates, last_rates) == pytest.approx(0.3)
+    # letter_score('aaaaaaaaaa') = 1.0 (distinct cap → only 'a' counts once)
+    # Positional bonuses add 0.1 + 0.2, both apply even when word[0] == word[-1].
+    assert positional_endpoint_score(
+        "aaaaaaaaaa", letter_rates, first_rates, last_rates
+    ) == pytest.approx(1.3)
 
 
 def test_positional_endpoint_score_unknown_letter_treated_as_zero() -> None:
-    assert positional_endpoint_score("aaaaaaaaaa", {}, {}) == pytest.approx(0.0)
+    assert positional_endpoint_score("aaaaaaaaaa", {}, {}, {}) == pytest.approx(0.0)
 
 
 # ---- top_n_by_score -----------------------------------------------------------
@@ -162,7 +183,7 @@ def test_trigram_score_rejects_short_word() -> None:
 
 def test_positional_endpoint_score_rejects_empty_word() -> None:
     with pytest.raises(ValueError, match="non-empty"):
-        positional_endpoint_score("", {}, {})
+        positional_endpoint_score("", {}, {}, {})
 
 
 def test_top_n_by_score_rejects_nan_score() -> None:
