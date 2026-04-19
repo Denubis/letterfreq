@@ -23,6 +23,10 @@ dependency-rationale.md     — Falsifiable justifications for every direct depe
 tests/                      — Pytest suite: frequency count validation and cross-checks
 zensical.toml               — Zensical configuration (TOML, not mkdocs.yml)
 site/                       — Build output (gitignored)
+dev_docs/                   — Project meta-docs NOT published by Zensical (kept outside docs/ on purpose; Zensical 0.0.33 has no exclude_docs/not_in_nav support)
+dev_docs/design-plans/      — Validated design plans awaiting implementation (e.g. ten-letter page)
+dev_docs/architecture/      — Architecture reference: glossary.md, personae.md, constraints.md, dfd/
+dev_docs/implementation-plans/ — Detailed task-level plans generated from design plans
 ```
 
 ## Commands
@@ -43,4 +47,4 @@ Static-first design. Python generates most of the page as HTML embedded in Markd
 
 Two JS files: `sort-tables.js` (table sorting, per-column normalisation, bigram drill-downs) and `trigram-expand.js` (trigram completion lists). Both use event delegation.
 
-Freshness: 2026-03-27
+Freshness: 2026-04-19
