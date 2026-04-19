@@ -287,5 +287,6 @@
     expansionDiv.innerHTML = parts.join("");
     expansionDiv.classList.add("active");
     activeBucketRow = row;
+    expansionDiv.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 })();
