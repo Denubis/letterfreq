@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from letterfreq.grouping import load_us_dict
 from letterfreq.reference import (
     bigram_counts,
     end_trigram_counts,
@@ -79,11 +80,16 @@ def generate_page(words_10: list[str], baseline: list[str]) -> str:
     )
 
     # --- Ranking tables (over the 10-letter words) -------------------------
-    rank_letter = render_letter_ranking(words_10, letter_r, top_n=50)
-    rank_bigram = render_bigram_ranking(words_10, bigram_r, top_n=50)
-    rank_trigram = render_trigram_ranking(words_10, start_r, end_r, top_n=50)
+    # US spelling dict drives the exemplar cascade and dict-resident marking
+    # in the expansion panel. Falls back to alphabetical when unavailable.
+    us_dict = load_us_dict()
+    rank_letter = render_letter_ranking(words_10, letter_r, top_n=50, us_dict=us_dict)
+    rank_bigram = render_bigram_ranking(words_10, bigram_r, top_n=50, us_dict=us_dict)
+    rank_trigram = render_trigram_ranking(
+        words_10, start_r, end_r, top_n=50, us_dict=us_dict
+    )
     rank_positional = render_positional_ranking(
-        words_10, letter_r, first_r, last_r, top_n=50
+        words_10, letter_r, first_r, last_r, top_n=50, us_dict=us_dict
     )
 
     return (

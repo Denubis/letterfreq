@@ -223,5 +223,73 @@
       });
       return;
     }
+
+    // Ranking-table bucket row — show tied words in expansion panel
+    var bucketRow = e.target.closest(".ranking-table tr.bucket-row.clickable");
+    if (bucketRow) {
+      showBucketExpansion(bucketRow);
+      return;
+    }
   });
+
+  /* --- Ranking-table bucket expansion --- */
+
+  var activeBucketRow = null;
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function renderWordList(pairs) {
+    return pairs.map(function (p) {
+      var cls = p[1] ? ' class="dict-resident"' : "";
+      return "<li" + cls + ">" + escapeHtml(p[0]) + "</li>";
+    }).join("");
+  }
+
+  function showBucketExpansion(row) {
+    var table = row.closest("table");
+    if (!table || !table.id) return;
+    var bid = row.getAttribute("data-bucket-id");
+    if (!bid) return;
+    var scriptEl = document.querySelector(
+      'script.bucket-data[data-table="' + table.id + '"]'
+    );
+    var expansionDiv = document.getElementById("expand-" + table.id);
+    if (!scriptEl || !expansionDiv) return;
+
+    if (activeBucketRow === row) {
+      expansionDiv.classList.remove("active");
+      expansionDiv.innerHTML = "";
+      activeBucketRow = null;
+      return;
+    }
+
+    document.querySelectorAll(".bucket-expansion.active").forEach(function (d) {
+      d.classList.remove("active");
+      d.innerHTML = "";
+    });
+
+    var data;
+    try { data = JSON.parse(scriptEl.textContent); } catch (err) { return; }
+    var words = data[bid];
+    if (!words || !words.length) return;
+
+    var inDict = words.filter(function (p) { return p[1]; });
+    var outOfDict = words.filter(function (p) { return !p[1]; });
+    var parts = [];
+    if (inDict.length) {
+      parts.push('<h4>In US dictionary (' + inDict.length + ')</h4>'
+        + '<ul>' + renderWordList(inDict) + '</ul>');
+    }
+    if (outOfDict.length) {
+      parts.push('<h4>Other forms (' + outOfDict.length + ')</h4>'
+        + '<ul>' + renderWordList(outOfDict) + '</ul>');
+    }
+    expansionDiv.innerHTML = parts.join("");
+    expansionDiv.classList.add("active");
+    activeBucketRow = row;
+  }
 })();

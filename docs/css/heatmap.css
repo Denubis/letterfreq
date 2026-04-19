@@ -230,3 +230,73 @@ details {
     grid-template-columns: 1fr;
   }
 }
+
+/* Side-by-side tables overflow the content column when .freq-bar keeps its
+   default 200px min-width. Halve it inside .ref-pair so both tables fit the
+   Zensical content area without pushing past the TOC rail. */
+.ref-pair .freq-bar {
+  min-width: 80px;
+}
+
+/* --- Ranking-table bucket rows and expansion panel (ten-letter page) --- */
+
+.ranking-table tr.bucket-row.clickable {
+  cursor: pointer;
+}
+
+.ranking-table tr.bucket-row.clickable:hover {
+  background-color: var(--md-default-fg-color--lightest, #f0f0f0);
+}
+
+.ranking-table .tied-count {
+  font-size: 0.85em;
+  color: var(--md-default-fg-color--light, #666);
+  margin-left: 0.4em;
+  font-weight: normal;
+}
+
+.bucket-expansion {
+  display: none;
+  margin: 0.5em 0 1.5em;
+  padding: 0.75em 1em;
+  border: 1px solid var(--md-default-fg-color--lightest, #e0e0e0);
+  border-radius: 4px;
+  background-color: var(--md-default-bg-color, transparent);
+}
+
+.bucket-expansion.active {
+  display: block;
+}
+
+.bucket-expansion h4 {
+  margin: 0 0 0.4em;
+  font-size: 0.95em;
+  color: var(--md-default-fg-color--light, #555);
+}
+
+.bucket-expansion h4:not(:first-of-type) {
+  margin-top: 0.8em;
+}
+
+.bucket-expansion ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em;
+}
+
+.bucket-expansion li {
+  padding: 0.15em 0.5em;
+  background-color: var(--md-default-fg-color--lightest, #eee);
+  border-radius: 3px;
+  font-family: var(--md-code-font, monospace);
+  font-size: 0.9em;
+}
+
+.bucket-expansion li.dict-resident {
+  font-weight: 700;
+  background-color: var(--md-primary-fg-color--light, #c0d0ff);
+  color: var(--md-primary-bg-color, #000);
+}
