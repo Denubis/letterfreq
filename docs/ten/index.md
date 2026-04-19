@@ -415,56 +415,56 @@ Score = sum of baseline bigram rates over the 9 consecutive bigram positions. Re
 <table class="freq-table sortable-table ranking-table">
   <thead><tr><th class="sortable" data-col="0">Rank</th><th class="sortable" data-col="1">Word</th><th class="sortable" data-col="2">Top contributors</th><th class="sortable" data-col="3">Score (bigram)</th></tr></thead>
   <tbody>
-  <tr><td class="freq-rank" data-value="1">1</td><td class="freq-word">interester</td><td class="freq-letters">er, te, in</td><td class="freq-score" data-value="0.139179">0.1392</td></tr>
-  <tr><td class="freq-rank" data-value="2">2</td><td class="freq-word">interested</td><td class="freq-letters">te, er, in</td><td class="freq-score" data-value="0.129239">0.1292</td></tr>
-  <tr><td class="freq-rank" data-value="3">3</td><td class="freq-word">interliner</td><td class="freq-letters">er, in, te</td><td class="freq-score" data-value="0.126146">0.1261</td></tr>
-  <tr><td class="freq-rank" data-value="4">4</td><td class="freq-word">intestines</td><td class="freq-letters">in, es, te</td><td class="freq-score" data-value="0.123650">0.1236</td></tr>
-  <tr><td class="freq-rank" data-value="5">5</td><td class="freq-word">interferer</td><td class="freq-letters">er, in, te</td><td class="freq-score" data-value="0.122735">0.1227</td></tr>
-  <tr><td class="freq-rank" data-value="6">6</td><td class="freq-word">malingerer</td><td class="freq-letters">er, in, re</td><td class="freq-score" data-value="0.120238">0.1202</td></tr>
-  <tr><td class="freq-rank" data-value="7">7</td><td class="freq-word">interlines</td><td class="freq-letters">in, er, es</td><td class="freq-score" data-value="0.120076">0.1201</td></tr>
-  <tr><td class="freq-rank" data-value="8">8</td><td class="freq-word">reinterest</td><td class="freq-letters">re, er, in</td><td class="freq-score" data-value="0.118274">0.1183</td></tr>
-  <tr><td class="freq-rank" data-value="9">9</td><td class="freq-word">intenerate</td><td class="freq-letters">te, er, in</td><td class="freq-score" data-value="0.118219">0.1182</td></tr>
-  <tr><td class="freq-rank" data-value="10">10</td><td class="freq-word">lateraling</td><td class="freq-letters">er, in, te</td><td class="freq-score" data-value="0.117079">0.1171</td></tr>
-  <tr><td class="freq-rank" data-value="11">11</td><td class="freq-word">interferes</td><td class="freq-letters">er, in, es</td><td class="freq-score" data-value="0.116665">0.1167</td></tr>
-  <tr><td class="freq-rank" data-value="12">12</td><td class="freq-word">interlined</td><td class="freq-letters">in, er, te</td><td class="freq-score" data-value="0.116205">0.1162</td></tr>
-  <tr><td class="freq-rank" data-value="13">13</td><td class="freq-word">itinerated</td><td class="freq-letters">er, in, te</td><td class="freq-score" data-value="0.115911">0.1159</td></tr>
-  <tr><td class="freq-rank" data-value="14">14</td><td class="freq-word">ministered</td><td class="freq-letters">er, in, te</td><td class="freq-score" data-value="0.115230">0.1152</td></tr>
-  <tr><td class="freq-rank" data-value="15">15</td><td class="freq-word">intestinal</td><td class="freq-letters">in, es, te</td><td class="freq-score" data-value="0.114862">0.1149</td></tr>
-  <tr><td class="freq-rank" data-value="16">16</td><td class="freq-word">restinging</td><td class="freq-letters">in, ng, es</td><td class="freq-score" data-value="0.114219">0.1142</td></tr>
-  <tr><td class="freq-rank" data-value="17">17</td><td class="freq-word">tangerines</td><td class="freq-letters">er, in, es</td><td class="freq-score" data-value="0.113811">0.1138</td></tr>
-  <tr><td class="freq-rank" data-value="18">18</td><td class="freq-word">deresinate</td><td class="freq-letters">er, in, es</td><td class="freq-score" data-value="0.113795">0.1138</td></tr>
-  <tr><td class="freq-rank" data-value="19">19</td><td class="freq-word">steriliser</td><td class="freq-letters">er, te, ri</td><td class="freq-score" data-value="0.113403">0.1134</td></tr>
-  <tr><td class="freq-rank" data-value="20">20</td><td class="freq-word">restringer</td><td class="freq-letters">er, in, es</td><td class="freq-score" data-value="0.113104">0.1131</td></tr>
-  <tr><td class="freq-rank" data-value="21">21</td><td class="freq-word">unentering</td><td class="freq-letters">er, in, te</td><td class="freq-score" data-value="0.113096">0.1131</td></tr>
-  <tr><td class="freq-rank" data-value="22">22</td><td class="freq-word">telesteria</td><td class="freq-letters">te, er, es</td><td class="freq-score" data-value="0.112979">0.1130</td></tr>
-  <tr><td class="freq-rank" data-value="23">23</td><td class="freq-word">leistering</td><td class="freq-letters">er, in, te</td><td class="freq-score" data-value="0.112976">0.1130</td></tr>
-  <tr><td class="freq-rank" data-value="24">24</td><td class="freq-word">incinerate</td><td class="freq-letters">in, er, te</td><td class="freq-score" data-value="0.112963">0.1130</td></tr>
-  <tr><td class="freq-rank" data-value="25">25</td><td class="freq-word">interfered</td><td class="freq-letters">er, in, te</td><td class="freq-score" data-value="0.112795">0.1128</td></tr>
-  <tr><td class="freq-rank" data-value="26">26</td><td class="freq-word">blistering</td><td class="freq-letters">er, in, te</td><td class="freq-score" data-value="0.112767">0.1128</td></tr>
-  <tr><td class="freq-rank" data-value="27">27</td><td class="freq-word">reentering</td><td class="freq-letters">er, in, te</td><td class="freq-score" data-value="0.112740">0.1127</td></tr>
-  <tr><td class="freq-rank" data-value="28">28</td><td class="freq-word">intermined</td><td class="freq-letters">in, er, te</td><td class="freq-score" data-value="0.112367">0.1124</td></tr>
-  <tr><td class="freq-rank" data-value="29">29</td><td class="freq-word">cointerest</td><td class="freq-letters">er, in, es</td><td class="freq-score" data-value="0.112316">0.1123</td></tr>
-  <tr><td class="freq-rank" data-value="30">30</td><td class="freq-word">ingatherer</td><td class="freq-letters">er, in, re</td><td class="freq-score" data-value="0.112223">0.1122</td></tr>
-  <tr><td class="freq-rank" data-value="31">31</td><td class="freq-word">stellerine</td><td class="freq-letters">er, in, te</td><td class="freq-score" data-value="0.112154">0.1122</td></tr>
-  <tr><td class="freq-rank" data-value="32">32</td><td class="freq-word">ingenerate</td><td class="freq-letters">er, in, te</td><td class="freq-score" data-value="0.111811">0.1118</td></tr>
-  <tr><td class="freq-rank" data-value="33">33</td><td class="freq-word">intertinge</td><td class="freq-letters">in, er, te</td><td class="freq-score" data-value="0.111788">0.1118</td></tr>
-  <tr><td class="freq-rank" data-value="34">34</td><td class="freq-word">resinating</td><td class="freq-letters">in, es, re</td><td class="freq-score" data-value="0.111501">0.1115</td></tr>
-  <tr><td class="freq-rank" data-value="35">35</td><td class="freq-word">tininesses</td><td class="freq-letters">in, es, ti</td><td class="freq-score" data-value="0.111250">0.1112</td></tr>
-  <tr><td class="freq-rank" data-value="36">36</td><td class="freq-word">glistering</td><td class="freq-letters">er, in, te</td><td class="freq-score" data-value="0.111217">0.1112</td></tr>
-  <tr><td class="freq-rank" data-value="37">37</td><td class="freq-word">tesserated</td><td class="freq-letters">te, er, es</td><td class="freq-score" data-value="0.110954">0.1110</td></tr>
-  <tr><td class="freq-rank" data-value="38">38</td><td class="freq-word">intervener</td><td class="freq-letters">er, in, te</td><td class="freq-score" data-value="0.110912">0.1109</td></tr>
-  <tr><td class="freq-rank" data-value="39">39</td><td class="freq-word">printeries</td><td class="freq-letters">ri, er, in</td><td class="freq-score" data-value="0.110543">0.1105</td></tr>
-  <tr><td class="freq-rank" data-value="40">40</td><td class="freq-word">cateresses</td><td class="freq-letters">es, er, te</td><td class="freq-score" data-value="0.110344">0.1103</td></tr>
-  <tr><td class="freq-rank" data-value="41">41</td><td class="freq-word">malingered</td><td class="freq-letters">er, in, re</td><td class="freq-score" data-value="0.110298">0.1103</td></tr>
-  <tr><td class="freq-rank" data-value="42">42</td><td class="freq-word">wateriness</td><td class="freq-letters">er, in, es</td><td class="freq-score" data-value="0.110289">0.1103</td></tr>
-  <tr><td class="freq-rank" data-value="43">43</td><td class="freq-word">tenderiser</td><td class="freq-letters">er, te, ri</td><td class="freq-score" data-value="0.110279">0.1103</td></tr>
-  <tr><td class="freq-rank" data-value="44">44</td><td class="freq-word">interceder</td><td class="freq-letters">er, in, te</td><td class="freq-score" data-value="0.110277">0.1103</td></tr>
-  <tr><td class="freq-rank" data-value="45">45</td><td class="freq-word">interessor</td><td class="freq-letters">er, in, es</td><td class="freq-score" data-value="0.110263">0.1103</td></tr>
-  <tr><td class="freq-rank" data-value="46">46</td><td class="freq-word">geneserine</td><td class="freq-letters">er, in, ne</td><td class="freq-score" data-value="0.110147">0.1101</td></tr>
-  <tr><td class="freq-rank" data-value="47">47</td><td class="freq-word">interstate</td><td class="freq-letters">te, er, in</td><td class="freq-score" data-value="0.110122">0.1101</td></tr>
-  <tr><td class="freq-rank" data-value="48">48</td><td class="freq-word">calenderer</td><td class="freq-letters">er, re, le</td><td class="freq-score" data-value="0.110039">0.1100</td></tr>
-  <tr><td class="freq-rank" data-value="49">49</td><td class="freq-word">eerinesses</td><td class="freq-letters">es, er, in</td><td class="freq-score" data-value="0.110020">0.1100</td></tr>
-  <tr><td class="freq-rank" data-value="50">50</td><td class="freq-word">underenter</td><td class="freq-letters">er, te, re</td><td class="freq-score" data-value="0.109757">0.1098</td></tr>
+  <tr><td class="freq-rank" data-value="1">1</td><td class="freq-word">interester</td><td class="freq-letters">er, te, in, es, re</td><td class="freq-score" data-value="0.139179">0.1392</td></tr>
+  <tr><td class="freq-rank" data-value="2">2</td><td class="freq-word">interested</td><td class="freq-letters">te, er, in, es, re</td><td class="freq-score" data-value="0.129239">0.1292</td></tr>
+  <tr><td class="freq-rank" data-value="3">3</td><td class="freq-word">interliner</td><td class="freq-letters">er, in, te, li, ne</td><td class="freq-score" data-value="0.126146">0.1261</td></tr>
+  <tr><td class="freq-rank" data-value="4">4</td><td class="freq-word">intestines</td><td class="freq-letters">in, es, te, st, ti</td><td class="freq-score" data-value="0.123650">0.1236</td></tr>
+  <tr><td class="freq-rank" data-value="5">5</td><td class="freq-word">interferer</td><td class="freq-letters">er, in, te, re, nt</td><td class="freq-score" data-value="0.122735">0.1227</td></tr>
+  <tr><td class="freq-rank" data-value="6">6</td><td class="freq-word">malingerer</td><td class="freq-letters">er, in, re, al, ng</td><td class="freq-score" data-value="0.120238">0.1202</td></tr>
+  <tr><td class="freq-rank" data-value="7">7</td><td class="freq-word">interlines</td><td class="freq-letters">in, er, es, te, li</td><td class="freq-score" data-value="0.120076">0.1201</td></tr>
+  <tr><td class="freq-rank" data-value="8">8</td><td class="freq-word">reinterest</td><td class="freq-letters">re, er, in, es, te</td><td class="freq-score" data-value="0.118274">0.1183</td></tr>
+  <tr><td class="freq-rank" data-value="9">9</td><td class="freq-word">intenerate</td><td class="freq-letters">te, er, in, en, at</td><td class="freq-score" data-value="0.118219">0.1182</td></tr>
+  <tr><td class="freq-rank" data-value="10">10</td><td class="freq-word">lateraling</td><td class="freq-letters">er, in, te, al, at</td><td class="freq-score" data-value="0.117079">0.1171</td></tr>
+  <tr><td class="freq-rank" data-value="11">11</td><td class="freq-word">interferes</td><td class="freq-letters">er, in, es, te, re</td><td class="freq-score" data-value="0.116665">0.1167</td></tr>
+  <tr><td class="freq-rank" data-value="12">12</td><td class="freq-word">interlined</td><td class="freq-letters">in, er, te, ed, li</td><td class="freq-score" data-value="0.116205">0.1162</td></tr>
+  <tr><td class="freq-rank" data-value="13">13</td><td class="freq-word">itinerated</td><td class="freq-letters">er, in, te, ed, at</td><td class="freq-score" data-value="0.115911">0.1159</td></tr>
+  <tr><td class="freq-rank" data-value="14">14</td><td class="freq-word">ministered</td><td class="freq-letters">er, in, te, re, ed</td><td class="freq-score" data-value="0.115230">0.1152</td></tr>
+  <tr><td class="freq-rank" data-value="15">15</td><td class="freq-word">intestinal</td><td class="freq-letters">in, es, te, al, st</td><td class="freq-score" data-value="0.114862">0.1149</td></tr>
+  <tr><td class="freq-rank" data-value="16">16</td><td class="freq-word">restinging</td><td class="freq-letters">in, ng, es, re, st</td><td class="freq-score" data-value="0.114219">0.1142</td></tr>
+  <tr><td class="freq-rank" data-value="17">17</td><td class="freq-word">tangerines</td><td class="freq-letters">er, in, es, an, ri</td><td class="freq-score" data-value="0.113811">0.1138</td></tr>
+  <tr><td class="freq-rank" data-value="18">18</td><td class="freq-word">deresinate</td><td class="freq-letters">er, in, es, te, re</td><td class="freq-score" data-value="0.113795">0.1138</td></tr>
+  <tr><td class="freq-rank" data-value="19">19</td><td class="freq-word">steriliser</td><td class="freq-letters">er, te, ri, is, st</td><td class="freq-score" data-value="0.113403">0.1134</td></tr>
+  <tr><td class="freq-rank" data-value="20">20</td><td class="freq-word">restringer</td><td class="freq-letters">er, in, es, re, ri</td><td class="freq-score" data-value="0.113104">0.1131</td></tr>
+  <tr><td class="freq-rank" data-value="21">21</td><td class="freq-word">unentering</td><td class="freq-letters">er, in, te, ri, en</td><td class="freq-score" data-value="0.113096">0.1131</td></tr>
+  <tr><td class="freq-rank" data-value="22">22</td><td class="freq-word">telesteria</td><td class="freq-letters">te, er, es, le, ri</td><td class="freq-score" data-value="0.112979">0.1130</td></tr>
+  <tr><td class="freq-rank" data-value="23">23</td><td class="freq-word">leistering</td><td class="freq-letters">er, in, te, le, ri</td><td class="freq-score" data-value="0.112976">0.1130</td></tr>
+  <tr><td class="freq-rank" data-value="24">24</td><td class="freq-word">incinerate</td><td class="freq-letters">in, er, te, at, ra</td><td class="freq-score" data-value="0.112963">0.1130</td></tr>
+  <tr><td class="freq-rank" data-value="25">25</td><td class="freq-word">interfered</td><td class="freq-letters">er, in, te, re, ed</td><td class="freq-score" data-value="0.112795">0.1128</td></tr>
+  <tr><td class="freq-rank" data-value="26">26</td><td class="freq-word">blistering</td><td class="freq-letters">er, in, te, ri, is</td><td class="freq-score" data-value="0.112767">0.1128</td></tr>
+  <tr><td class="freq-rank" data-value="27">27</td><td class="freq-word">reentering</td><td class="freq-letters">er, in, te, re, ri</td><td class="freq-score" data-value="0.112740">0.1127</td></tr>
+  <tr><td class="freq-rank" data-value="28">28</td><td class="freq-word">intermined</td><td class="freq-letters">in, er, te, ed, ne</td><td class="freq-score" data-value="0.112367">0.1124</td></tr>
+  <tr><td class="freq-rank" data-value="29">29</td><td class="freq-word">cointerest</td><td class="freq-letters">er, in, es, te, re</td><td class="freq-score" data-value="0.112316">0.1123</td></tr>
+  <tr><td class="freq-rank" data-value="30">30</td><td class="freq-word">ingatherer</td><td class="freq-letters">er, in, re, at, ng</td><td class="freq-score" data-value="0.112223">0.1122</td></tr>
+  <tr><td class="freq-rank" data-value="31">31</td><td class="freq-word">stellerine</td><td class="freq-letters">er, in, te, le, ri</td><td class="freq-score" data-value="0.112154">0.1122</td></tr>
+  <tr><td class="freq-rank" data-value="32">32</td><td class="freq-word">ingenerate</td><td class="freq-letters">er, in, te, en, at</td><td class="freq-score" data-value="0.111811">0.1118</td></tr>
+  <tr><td class="freq-rank" data-value="33">33</td><td class="freq-word">intertinge</td><td class="freq-letters">in, er, te, ng, ti</td><td class="freq-score" data-value="0.111788">0.1118</td></tr>
+  <tr><td class="freq-rank" data-value="34">34</td><td class="freq-word">resinating</td><td class="freq-letters">in, es, re, at, ng</td><td class="freq-score" data-value="0.111501">0.1115</td></tr>
+  <tr><td class="freq-rank" data-value="35">35</td><td class="freq-word">tininesses</td><td class="freq-letters">in, es, ti, ne, se</td><td class="freq-score" data-value="0.111250">0.1112</td></tr>
+  <tr><td class="freq-rank" data-value="36">36</td><td class="freq-word">glistering</td><td class="freq-letters">er, in, te, ri, is</td><td class="freq-score" data-value="0.111217">0.1112</td></tr>
+  <tr><td class="freq-rank" data-value="37">37</td><td class="freq-word">tesserated</td><td class="freq-letters">te, er, es, ed, at</td><td class="freq-score" data-value="0.110954">0.1110</td></tr>
+  <tr><td class="freq-rank" data-value="38">38</td><td class="freq-word">intervener</td><td class="freq-letters">er, in, te, en, ne</td><td class="freq-score" data-value="0.110912">0.1109</td></tr>
+  <tr><td class="freq-rank" data-value="39">39</td><td class="freq-word">printeries</td><td class="freq-letters">ri, er, in, es, te</td><td class="freq-score" data-value="0.110543">0.1105</td></tr>
+  <tr><td class="freq-rank" data-value="40">40</td><td class="freq-word">cateresses</td><td class="freq-letters">es, er, te, re, at</td><td class="freq-score" data-value="0.110344">0.1103</td></tr>
+  <tr><td class="freq-rank" data-value="41">41</td><td class="freq-word">malingered</td><td class="freq-letters">er, in, re, ed, al</td><td class="freq-score" data-value="0.110298">0.1103</td></tr>
+  <tr><td class="freq-rank" data-value="42">42</td><td class="freq-word">wateriness</td><td class="freq-letters">er, in, es, te, ri</td><td class="freq-score" data-value="0.110289">0.1103</td></tr>
+  <tr><td class="freq-rank" data-value="43">43</td><td class="freq-word">tenderiser</td><td class="freq-letters">er, te, ri, en, is</td><td class="freq-score" data-value="0.110279">0.1103</td></tr>
+  <tr><td class="freq-rank" data-value="44">44</td><td class="freq-word">interceder</td><td class="freq-letters">er, in, te, ed, de</td><td class="freq-score" data-value="0.110277">0.1103</td></tr>
+  <tr><td class="freq-rank" data-value="45">45</td><td class="freq-word">interessor</td><td class="freq-letters">er, in, es, te, re</td><td class="freq-score" data-value="0.110263">0.1103</td></tr>
+  <tr><td class="freq-rank" data-value="46">46</td><td class="freq-word">geneserine</td><td class="freq-letters">er, in, ne, es, ri</td><td class="freq-score" data-value="0.110147">0.1101</td></tr>
+  <tr><td class="freq-rank" data-value="47">47</td><td class="freq-word">interstate</td><td class="freq-letters">te, er, in, st, at</td><td class="freq-score" data-value="0.110122">0.1101</td></tr>
+  <tr><td class="freq-rank" data-value="48">48</td><td class="freq-word">calenderer</td><td class="freq-letters">er, re, le, al, en</td><td class="freq-score" data-value="0.110039">0.1100</td></tr>
+  <tr><td class="freq-rank" data-value="49">49</td><td class="freq-word">eerinesses</td><td class="freq-letters">es, er, in, ri, ne</td><td class="freq-score" data-value="0.110020">0.1100</td></tr>
+  <tr><td class="freq-rank" data-value="50">50</td><td class="freq-word">underenter</td><td class="freq-letters">er, te, re, en, un</td><td class="freq-score" data-value="0.109757">0.1098</td></tr>
   </tbody>
 </table>
 

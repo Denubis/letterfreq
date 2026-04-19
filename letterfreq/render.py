@@ -25,7 +25,7 @@ from letterfreq.scoring import (
 # "Top contributors" column. Acts as a transparency cap. Bump if Task 3's
 # test_topN_bigram_transparency_covers_majority shows top-N covers <50% of
 # total bigram score for any top-10 ranked word.
-BIGRAM_TRANSPARENCY_CAP: int = 3
+BIGRAM_TRANSPARENCY_CAP: int = 5
 
 
 def _bar_cell(rate: float, max_rate: float) -> str:
