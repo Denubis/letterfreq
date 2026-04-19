@@ -55,7 +55,7 @@ Append the following block at the end of `docs/css/heatmap.css`:
   min-width: 0; /* allow children to shrink within their grid cell */
 }
 
-@media (max-width: 720px) {
+@media (max-width: 768px) {
   .ref-pair {
     grid-template-columns: 1fr;
   }
