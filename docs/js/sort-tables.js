@@ -252,13 +252,10 @@
   function showBucketExpansion(row) {
     var table = row.closest("table");
     if (!table || !table.id) return;
-    var bid = row.getAttribute("data-bucket-id");
-    if (!bid) return;
-    var scriptEl = document.querySelector(
-      'script.bucket-data[data-table="' + table.id + '"]'
-    );
+    var payload = row.getAttribute("data-bucket-words");
+    if (!payload) return;
     var expansionDiv = document.getElementById("expand-" + table.id);
-    if (!scriptEl || !expansionDiv) return;
+    if (!expansionDiv) return;
 
     if (activeBucketRow === row) {
       expansionDiv.classList.remove("active");
@@ -272,9 +269,8 @@
       d.innerHTML = "";
     });
 
-    var data;
-    try { data = JSON.parse(scriptEl.textContent); } catch (err) { return; }
-    var words = data[bid];
+    var words;
+    try { words = JSON.parse(payload); } catch (err) { return; }
     if (!words || !words.length) return;
 
     var inDict = words.filter(function (p) { return p[1]; });

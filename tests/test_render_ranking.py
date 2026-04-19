@@ -96,15 +96,16 @@ def test_letter_ranking_exemplar_cascade_prefers_dict_resident() -> None:
     assert "+2 more" in html
 
 
-def test_letter_ranking_emits_expansion_shell_and_bucket_data() -> None:
+def test_letter_ranking_emits_expansion_shell_and_inline_bucket_data() -> None:
     rates = {ch: 0.1 for ch in string.ascii_lowercase}
     words = ["abcdefghij", "bacdefghij"]  # anagrams → one bucket
     html = render_letter_ranking(words, rates, top_n=1)
     assert 'id="expand-rank-letter"' in html
     assert 'class="bucket-expansion"' in html
-    assert 'class="bucket-data"' in html
-    # data-table wires the script to the matching table id
-    assert 'data-table="rank-letter"' in html
+    # Tied-word payload lives on the row as a data-attribute, not in a <script> island
+    # (Zensical's instant-router choked on inline JSON script tags).
+    assert "data-bucket-words=" in html
+    assert "<script" not in html
 
 
 def test_letter_ranking_singleton_bucket_has_no_click_markup() -> None:
@@ -244,4 +245,3 @@ def test_all_ranking_tables_emit_expansion_shell() -> None:
     ]
     for html, table_id in htmls:
         assert f'id="expand-{table_id}"' in html
-        assert f'data-table="{table_id}"' in html

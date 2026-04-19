@@ -255,25 +255,23 @@ def _tied_badge(bucket_size: int) -> str:
     return f' <span class="tied-count">+{bucket_size - 1} more</span>'
 
 
-def _bucket_row_attrs(bucket_id: str, bucket_size: int) -> str:
-    """Attributes for an exemplar <tr>. Only bucket-size > 1 rows become clickable."""
-    if bucket_size <= 1:
-        return ""
-    return f' class="bucket-row clickable" data-bucket-id="{escape(bucket_id)}"'
-
-
-def _bucket_data_island(
-    table_id: str,
-    bucket_data: dict[str, list[tuple[str, bool]]],
+def _bucket_row_attrs(
+    bucket_words: list[tuple[str, bool]],
 ) -> str:
-    """Emit a JSON script tag carrying the tied-word lists for a ranking table."""
-    payload = json.dumps(
-        {k: [[w, r] for w, r in v] for k, v in bucket_data.items()},
-        ensure_ascii=True,
-    )
+    """Attributes for an exemplar <tr>. Only multi-word buckets become clickable.
+
+    Single-word buckets get no clickable markup at all. Multi-word buckets carry
+    their tied-word list as an HTML-escaped JSON payload in data-bucket-words,
+    so JS reads the list directly off the row without a separate data island —
+    an inline <script type="application/json"> tag broke Zensical's instant-router
+    DOM processing (unexpected ':' during replaceWith).
+    """
+    if len(bucket_words) <= 1:
+        return ""
+    payload = json.dumps([[w, r] for w, r in bucket_words], ensure_ascii=True)
     return (
-        f'<script type="application/json" class="bucket-data" '
-        f'data-table="{escape(table_id)}">{payload}</script>'
+        ' class="bucket-row clickable" '
+        f'data-bucket-words="{escape(payload, quote=True)}"'
     )
 
 
@@ -304,7 +302,6 @@ def render_letter_ranking(
     buckets = gap_cluster(scored, eps=eps)[:top_n]
     table_id = "rank-letter"
     rows: list[str] = []
-    bucket_data: dict[str, list[tuple[str, bool]]] = {}
     for rank, bucket in enumerate(buckets, start=1):
         bucket_words = [w for w, _ in bucket]
         ex = exemplar(bucket_words, us_dict)
@@ -313,24 +310,21 @@ def render_letter_ranking(
             set(ex), key=lambda ch: (-letter_rates.get(ch, 0.0), ch)
         )
         letters_str = " ".join(distinct_sorted)
-        bid = str(rank)
+        sorted_pairs = sort_bucket_words(bucket_words, us_dict)
         rows.append(
-            f"  <tr{_bucket_row_attrs(bid, len(bucket_words))}>"
+            f"  <tr{_bucket_row_attrs(sorted_pairs)}>"
             f'<td class="freq-rank" data-value="{rank}">{rank}</td>'
             f'<td class="freq-word">{escape(ex)}{_tied_badge(len(bucket_words))}</td>'
             f'<td class="freq-letters">{escape(letters_str)}</td>'
             f'<td class="freq-score" data-value="{top_score:.6f}">{top_score:.4f}</td>'
             f"</tr>"
         )
-        if len(bucket_words) > 1:
-            bucket_data[bid] = sort_bucket_words(bucket_words, us_dict)
     return (
         f'<table class="freq-table sortable-table ranking-table" id="{table_id}">\n'
         + _ranking_thead(["Rank", "Word", "Distinct letters", "Score (letter)"])
         + "  <tbody>\n"
         + "\n".join(rows)
         + "\n  </tbody>\n</table>\n"
-        + _bucket_data_island(table_id, bucket_data) + "\n"
         + _expansion_shell(table_id)
     )
 
@@ -353,7 +347,6 @@ def render_bigram_ranking(
     buckets = gap_cluster(scored, eps=eps)[:top_n]
     table_id = "rank-bigram"
     rows: list[str] = []
-    bucket_data: dict[str, list[tuple[str, bool]]] = {}
     for rank, bucket in enumerate(buckets, start=1):
         bucket_words = [w for w, _ in bucket]
         ex = exemplar(bucket_words, us_dict)
@@ -364,24 +357,21 @@ def render_bigram_ranking(
             key=lambda bg: (-bigram_rates.get(bg, 0.0), bg),
         )[:3]
         contrib_str = ", ".join(contribs)
-        bid = str(rank)
+        sorted_pairs = sort_bucket_words(bucket_words, us_dict)
         rows.append(
-            f"  <tr{_bucket_row_attrs(bid, len(bucket_words))}>"
+            f"  <tr{_bucket_row_attrs(sorted_pairs)}>"
             f'<td class="freq-rank" data-value="{rank}">{rank}</td>'
             f'<td class="freq-word">{escape(ex)}{_tied_badge(len(bucket_words))}</td>'
             f'<td class="freq-letters">{escape(contrib_str)}</td>'
             f'<td class="freq-score" data-value="{top_score:.6f}">{top_score:.4f}</td>'
             f"</tr>"
         )
-        if len(bucket_words) > 1:
-            bucket_data[bid] = sort_bucket_words(bucket_words, us_dict)
     return (
         f'<table class="freq-table sortable-table ranking-table" id="{table_id}">\n'
         + _ranking_thead(["Rank", "Word", "Top contributors", "Score (bigram)"])
         + "  <tbody>\n"
         + "\n".join(rows)
         + "\n  </tbody>\n</table>\n"
-        + _bucket_data_island(table_id, bucket_data) + "\n"
         + _expansion_shell(table_id)
     )
 
@@ -405,14 +395,13 @@ def render_trigram_ranking(
     buckets = gap_cluster(scored, eps=eps)[:top_n]
     table_id = "rank-trigram"
     rows: list[str] = []
-    bucket_data: dict[str, list[tuple[str, bool]]] = {}
     for rank, bucket in enumerate(buckets, start=1):
         bucket_words = [w for w, _ in bucket]
         ex = exemplar(bucket_words, us_dict)
         top_score = bucket[0][1]
-        bid = str(rank)
+        sorted_pairs = sort_bucket_words(bucket_words, us_dict)
         rows.append(
-            f"  <tr{_bucket_row_attrs(bid, len(bucket_words))}>"
+            f"  <tr{_bucket_row_attrs(sorted_pairs)}>"
             f'<td class="freq-rank" data-value="{rank}">{rank}</td>'
             f'<td class="freq-word">{escape(ex)}{_tied_badge(len(bucket_words))}</td>'
             f'<td class="freq-letters">{escape(ex[:3])}</td>'
@@ -420,15 +409,12 @@ def render_trigram_ranking(
             f'<td class="freq-score" data-value="{top_score:.6f}">{top_score:.4f}</td>'
             f"</tr>"
         )
-        if len(bucket_words) > 1:
-            bucket_data[bid] = sort_bucket_words(bucket_words, us_dict)
     return (
         f'<table class="freq-table sortable-table ranking-table" id="{table_id}">\n'
         + _ranking_thead(["Rank", "Word", "Start", "End", "Score (trigram)"])
         + "  <tbody>\n"
         + "\n".join(rows)
         + "\n  </tbody>\n</table>\n"
-        + _bucket_data_island(table_id, bucket_data) + "\n"
         + _expansion_shell(table_id)
     )
 
@@ -455,14 +441,13 @@ def render_positional_ranking(
     buckets = gap_cluster(scored, eps=eps)[:top_n]
     table_id = "rank-positional"
     rows: list[str] = []
-    bucket_data: dict[str, list[tuple[str, bool]]] = {}
     for rank, bucket in enumerate(buckets, start=1):
         bucket_words = [w for w, _ in bucket]
         ex = exemplar(bucket_words, us_dict)
         top_score = bucket[0][1]
-        bid = str(rank)
+        sorted_pairs = sort_bucket_words(bucket_words, us_dict)
         rows.append(
-            f"  <tr{_bucket_row_attrs(bid, len(bucket_words))}>"
+            f"  <tr{_bucket_row_attrs(sorted_pairs)}>"
             f'<td class="freq-rank" data-value="{rank}">{rank}</td>'
             f'<td class="freq-word">{escape(ex)}{_tied_badge(len(bucket_words))}</td>'
             f'<td class="freq-letters">{escape(ex[0])}</td>'
@@ -470,14 +455,11 @@ def render_positional_ranking(
             f'<td class="freq-score" data-value="{top_score:.6f}">{top_score:.4f}</td>'
             f"</tr>"
         )
-        if len(bucket_words) > 1:
-            bucket_data[bid] = sort_bucket_words(bucket_words, us_dict)
     return (
         f'<table class="freq-table sortable-table ranking-table" id="{table_id}">\n'
         + _ranking_thead(["Rank", "Word", "First", "Last", "Score (endpoint)"])
         + "  <tbody>\n"
         + "\n".join(rows)
         + "\n  </tbody>\n</table>\n"
-        + _bucket_data_island(table_id, bucket_data) + "\n"
         + _expansion_shell(table_id)
     )
