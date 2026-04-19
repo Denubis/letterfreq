@@ -21,6 +21,12 @@ from letterfreq.scoring import (
     trigram_score,
 )
 
+# The number of top-contributing bigrams to display in render_bigram_ranking's
+# "Top contributors" column. Acts as a transparency cap. Bump if Task 3's
+# test_topN_bigram_transparency_covers_majority shows top-N covers <50% of
+# total bigram score for any top-10 ranked word.
+BIGRAM_TRANSPARENCY_CAP: int = 3
+
 
 def _bar_cell(rate: float, max_rate: float) -> str:
     """Render the visual bar cell as a CSS linear-gradient td."""
@@ -299,7 +305,7 @@ def render_bigram_ranking(
                 for bg, cnt in per_word_bigrams.items()
             ),
             key=lambda kv: (-kv[1], kv[0]),
-        )[:3]
+        )[:BIGRAM_TRANSPARENCY_CAP]
         contrib_str = ", ".join(bg for bg, _ in contribs)
         rows.append(
             f"  <tr>"
