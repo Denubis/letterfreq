@@ -46,13 +46,15 @@ def test_letter_ranking_has_top_50_rows() -> None:
     assert html.count("<tr>") == 51  # 1 thead + 50 tbody
 
 
-def test_letter_ranking_transparency_lists_distinct_letters() -> None:
-    rates = {ch: 0.1 for ch in string.ascii_lowercase}
-    # Word 'aabbccddee' has 5 distinct letters: a, b, c, d, e
+def test_letter_ranking_transparency_lists_distinct_letters_sorted_by_rate() -> None:
+    # Non-uniform rates so ordering can be verified, not just presence.
+    # Expected order in transparency cell: a (0.5), b (0.3), c (0.1), d (0.05), e (0.02).
+    rates = {ch: 0.001 for ch in string.ascii_lowercase}
+    rates.update({"a": 0.5, "b": 0.3, "c": 0.1, "d": 0.05, "e": 0.02})
     html = render_letter_ranking(["aabbccddee"], rates, top_n=1)
-    # Each distinct letter should appear in the transparency cell
-    for ch in "abcde":
-        assert ch in html
+    # Distinct letters of 'aabbccddee' are {a,b,c,d,e} — joined with spaces,
+    # sorted by (-rate, letter) so the cell reads "a b c d e".
+    assert "a b c d e" in html
 
 
 def test_letter_ranking_is_sortable() -> None:
@@ -72,14 +74,20 @@ def test_bigram_ranking_has_top_50_rows() -> None:
 
 
 def test_bigram_ranking_transparency_top_3_by_contribution() -> None:
-    """For 'statistics' with high 'st' rate, 'st' should appear in top-3 contributors."""
-    rates = {"st": 0.5, "ta": 0.01, "at": 0.01, "ti": 0.05, "is": 0.01, "ic": 0.01, "cs": 0.01}
-    # 'statistics' has bigrams: st, ta, at, ti, is, st, ti, ic, cs
-    # Contributions: st: 0.5 * 2 = 1.0, ti: 0.05 * 2 = 0.1, is: 0.01 * 1 = 0.01, ...
-    # Top 3 by contribution: st, ti, then a tie at 0.01 (alphabetical: at)
-    html = render_bigram_ranking(["statistics"], rates, top_n=1)
-    # 'st' must be in the top-contributors cell (look for it as a standalone token)
-    assert "st" in html
+    """Transparency sort is by contribution (rate × per-word-count), NOT raw rate.
+
+    Word 'ababababcd' has bigrams: ab (4x), ba (3x), bc (1x), cd (1x).
+    Rates: ab=0.1, ba=0.0, bc=0.0, cd=0.25.
+    Contributions: ab=0.4, cd=0.25, ba=0.0, bc=0.0.
+    Raw-rate ordering would put cd before ab; contribution ordering puts ab first.
+    If the implementation were sorting by raw rate, 'cd, ab' would appear in the cell.
+    """
+    rates = {"ab": 0.1, "ba": 0.0, "bc": 0.0, "cd": 0.25}
+    html = render_bigram_ranking(["ababababcd"], rates, top_n=1)
+    # Correct contribution ordering: "ab" comes before "cd"
+    assert "ab, cd" in html
+    # Negative assertion: the raw-rate ordering must NOT appear
+    assert "cd, ab" not in html
 
 
 # ---- Trigram ranking ----------------------------------------------------------

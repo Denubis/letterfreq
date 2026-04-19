@@ -245,12 +245,14 @@ def render_letter_ranking(
     The 'distinct letters' column lists the unique letters in the word, sorted
     descending by their individual rate (highest-rate letter first).
     """
-    score_fn = lambda word: letter_score(word, letter_rates)
+    def score_fn(word: str) -> float:
+        return letter_score(word, letter_rates)
+
     ranked = top_n_by_score(words_10, score_fn, n=top_n)
     rows: list[str] = []
     for rank, (word, score) in enumerate(ranked, start=1):
         distinct_sorted = sorted(
-            set(word), key=lambda l: (-letter_rates.get(l, 0.0), l)
+            set(word), key=lambda ch: (-letter_rates.get(ch, 0.0), ch)
         )
         letters_str = " ".join(distinct_sorted)
         rows.append(
@@ -283,7 +285,9 @@ def render_bigram_ranking(
     For a word like 'statistics' where 'st' appears 3 times, 'st' is listed
     once with the multiplied contribution.
     """
-    score_fn = lambda word: bigram_score(word, bigram_rates)
+    def score_fn(word: str) -> float:
+        return bigram_score(word, bigram_rates)
+
     ranked = top_n_by_score(words_10, score_fn, n=top_n)
     rows: list[str] = []
     for rank, (word, score) in enumerate(ranked, start=1):
