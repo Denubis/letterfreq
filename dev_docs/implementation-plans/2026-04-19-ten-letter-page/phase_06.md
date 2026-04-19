@@ -343,7 +343,7 @@ Open http://localhost:8000 and verify:
    - Start/end trigram pair: side-by-side at desktop width, stacked at mobile width.
    - First/last letter pair: 26 rows each side, side-by-side at desktop width.
    - Four ranking tables: 50 rows each. Spot-check: a high-letter-coverage word should contain many of {e, t, a, o, i, n}. Doubled-endpoint check: scan the positional ranking for any 10-letter word whose first and last letters match (if one is in the corpus); both letters should still contribute to its score, per DR8 (no distinct cap on endpoints).
-   - Bigram transparency: Task 3's `test_top10_bigram_transparency_covers_majority` enforces the 50% rule (top-3 contributors must cover ≥50% of total bigram score for every top-10 word). If that test fails, bump the cap from 3 to 5 in `render_bigram_ranking` and re-run `main_ten.py` + `zensical build` before completing the visual check. No manual vibes-judgment needed.
+   - Bigram transparency: Task 3's `test_topN_bigram_transparency_covers_majority` enforces the 50% rule (top-N contributors must cover ≥50% of total bigram score for every top-10 word, where N = `BIGRAM_TRANSPARENCY_CAP`). If that test fails, bump the constant in `letterfreq/render.py` (a one-line change; the test re-reads it) and re-run `main_ten.py` + `zensical build` before completing the visual check. No manual vibes-judgment needed.
 4. **Theme toggle:** Light/dark mode switch works on all three pages.
 5. **Instant navigation:** Clicking nav links between pages doesn't full-reload (URL bar updates without flicker; `navigation.instant` working).
 
@@ -361,9 +361,41 @@ git commit -m "feat: main_ten.py — generate populated /ten/ page (4 reference 
 **Verifies three things:**
 1. The actual rate dicts produced inside `generate_page` (via `_compute_rates`) sum to 1.0 with the chosen denominators — closes the Phase 5 deferred concern #1 regression-guard gap by calling the production helper rather than re-deriving rates inside the test.
 2. `load_words` deduplicates — Phase 5 deferred concern #3 (defensive in-process guard against duplicate corpus entries).
-3. The bigram top-3 transparency rule holds for all top-10 ranked words — Phase 5 deferred concern #2. Hard assertion: if any top-10 word's top-3 bigram contributions sum to less than 50% of its total bigram score, the test fails and the implementer must bump the cap to 5 in `render_bigram_ranking`.
+3. The bigram top-N transparency rule holds for all top-10 ranked words — Phase 5 deferred concern #2. Hard assertion: if any top-10 word's top-N bigram contributions sum to less than 50% of its total bigram score, the test fails and the implementer must bump the cap. **Single source of truth:** the cap lives as `BIGRAM_TRANSPARENCY_CAP` in `letterfreq.render`; the test imports it. Bumping the cap is a one-line edit; both `render_bigram_ranking` and the test pick up the new value automatically.
+
+**Pre-Task 3 prep (refactor `letterfreq/render.py` to hoist the cap):**
+
+Before creating the test file, edit `letterfreq/render.py`:
+
+1. Add a module-level constant near the top (after imports, before any function definitions):
+   ```python
+   # The number of top-contributing bigrams to display in render_bigram_ranking's
+   # "Top contributors" column. Acts as a transparency cap. Bump if Task 3's
+   # test_topN_bigram_transparency_covers_majority shows top-N covers <50% of
+   # total bigram score for any top-10 ranked word.
+   BIGRAM_TRANSPARENCY_CAP: int = 3
+   ```
+2. In `render_bigram_ranking`, change the slice from `[:3]` to `[:BIGRAM_TRANSPARENCY_CAP]`:
+   ```python
+   contribs = sorted(
+       (
+           (bg, bigram_rates.get(bg, 0.0) * cnt)
+           for bg, cnt in per_word_bigrams.items()
+       ),
+       key=lambda kv: (-kv[1], kv[0]),
+   )[:BIGRAM_TRANSPARENCY_CAP]  # was: [:3]
+   ```
+
+This refactor is a no-behaviour-change at the default value of 3 — `render_bigram_ranking` produces identical output. Verify by running `uv run python main_ten.py` and `diff`-ing the new `docs/ten/index.md` against the previous one (should be byte-identical).
+
+Commit this refactor first, BEFORE creating the test file:
+```bash
+git add letterfreq/render.py
+git commit -m "refactor(render): hoist bigram transparency cap to BIGRAM_TRANSPARENCY_CAP"
+```
 
 **Files:**
+- Modify: `/home/brian/llm/letterfreq/letterfreq/render.py` (constant + slice swap, committed first)
 - Create: `/home/brian/llm/letterfreq/tests/test_main_ten.py`
 
 **Implementation:**
@@ -375,8 +407,10 @@ Closes three Phase 5 deferred concerns:
   1. Rate dicts produced by _compute_rates sum to 1.0 (denominator regression
      guard — calls the production helper, not a re-derivation).
   2. load_words deduplicates input lines.
-  3. Top-3 bigram transparency covers ≥50% of total score for every top-10
-     ranked word (forces a cap bump if violated).
+  3. Top-N bigram transparency covers ≥50% of total score for every top-10
+     ranked word, where N is the production cap BIGRAM_TRANSPARENCY_CAP from
+     letterfreq.render. Single source of truth: bumping the constant in
+     render.py changes both the rendered cell width and what this test asserts.
 """
 
 from __future__ import annotations
@@ -386,6 +420,7 @@ from pathlib import Path
 
 import pytest
 
+from letterfreq.render import BIGRAM_TRANSPARENCY_CAP
 from letterfreq.scoring import bigram_score, top_n_by_score
 from main_ten import (
     WORDS_10_FILE,
@@ -463,19 +498,22 @@ def test_load_words_drops_empty_lines(tmp_path: Path) -> None:
 # --- Concern #2: bigram top-3 transparency covers majority --------------------
 
 
-def test_top10_bigram_transparency_covers_majority(
+def test_topN_bigram_transparency_covers_majority(
     baseline_words: list[str],
     production_rates: dict[str, dict[str, float]],
 ) -> None:
-    """For every top-10 ranked ten-letter word, the top-3 bigram contributions
-    must sum to ≥50% of that word's total bigram score. If this fails, the
-    transparency cap of 3 in render_bigram_ranking is hiding more than half
-    of the score's justification — bump it to 5 in render.py and re-render.
+    """For every top-10 ranked ten-letter word, the top-N bigram contributions
+    must sum to ≥50% of that word's total bigram score, where
+    N = letterfreq.render.BIGRAM_TRANSPARENCY_CAP (the same cap the rendered
+    "Top contributors" cell uses). If this fails, bump the constant in
+    letterfreq/render.py and re-render — the test will pick up the new value
+    automatically because it imports the constant rather than hard-coding it.
     """
     if not WORDS_10_FILE.exists():
         pytest.skip(f"ten-letter corpus not present: {WORDS_10_FILE}")
     words_10 = load_words(WORDS_10_FILE)
     bigram_r = production_rates["bigram"]
+    cap = BIGRAM_TRANSPARENCY_CAP
 
     def score(word: str) -> float:
         return bigram_score(word, bigram_r)
@@ -490,17 +528,19 @@ def test_top10_bigram_transparency_covers_majority(
             (bigram_r.get(bg, 0.0) * cnt for bg, cnt in per_word_bigrams.items()),
             reverse=True,
         )
-        top3_sum = sum(contribs[:3])
-        ratio = top3_sum / total
+        topN_sum = sum(contribs[:cap])
+        ratio = topN_sum / total
         if ratio < 0.5:
             failures.append(
-                f"  {word!r}: top-3 covers {ratio:.1%} "
-                f"({top3_sum:.4f} / {total:.4f})"
+                f"  {word!r}: top-{cap} covers {ratio:.1%} "
+                f"({topN_sum:.4f} / {total:.4f})"
             )
     assert not failures, (
-        "Top-3 bigram transparency hides too much for the following top-10 "
-        "ranked words. Bump the cap from 3 to 5 in render_bigram_ranking and "
-        "re-run main_ten.py + zensical build:\n" + "\n".join(failures)
+        f"Top-{cap} bigram transparency hides more than half of the score for "
+        "the following top-10 ranked words. Bump BIGRAM_TRANSPARENCY_CAP in "
+        "letterfreq/render.py (e.g., from 3 to 5) and re-run main_ten.py + "
+        "zensical build. The test re-reads the constant on next run.\n"
+        + "\n".join(failures)
     )
 ```
 
@@ -510,9 +550,16 @@ def test_top10_bigram_transparency_covers_majority(
 uv run python -m pytest tests/test_main_ten.py -v
 ```
 
-Expected: 9 tests pass (6 parametrised rate tests + 2 dedupe/empty-line tests + 1 transparency test).
+Expected: 9 tests pass (6 parametrised `test_production_rates_sum_to_one[...]`, 2 `load_words` tests, 1 `test_topN_bigram_transparency_covers_majority`).
 
-**If `test_top10_bigram_transparency_covers_majority` fails:** edit `letterfreq/render.py` and change `[:3]` to `[:5]` in `render_bigram_ranking` (search for the `contribs = sorted(...)[:3]` slice). Re-run `uv run python main_ten.py` and `uv run zensical build --clean`. Re-run the test. Commit the cap change as a separate commit before the test commit.
+**If `test_topN_bigram_transparency_covers_majority` fails:** edit `letterfreq/render.py` and change `BIGRAM_TRANSPARENCY_CAP = 3` to `BIGRAM_TRANSPARENCY_CAP = 5` (a single-line constant change — both `render_bigram_ranking` and the test pick up the new value because both import the constant). Re-run `uv run python main_ten.py` and `uv run zensical build --clean`. Re-run the test. Commit the cap change as a separate commit before the test commit:
+
+```bash
+git add letterfreq/render.py docs/ten/index.md
+git commit -m "fix(render): bump BIGRAM_TRANSPARENCY_CAP from 3 to 5 (top-3 covered <50% for some top-10 words)"
+```
+
+If even cap=5 fails, STOP — the data does not support meaningful concentration-based transparency at the top-10 ranks; needs design discussion (don't keep bumping the cap toward 9).
 
 **Commit:**
 
