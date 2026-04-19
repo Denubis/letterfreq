@@ -346,8 +346,6 @@ Reference frequencies computed over **248,010** English words of length 3–10 (
 
 ## Ten-letter words
 
-Note: the reference tables above show **per-word rates** (fraction of baseline words containing each item). The scoring formulas below use **per-occurrence rates** (fraction of all letter / bigram / trigram occurrences across the baseline). Same baseline corpus, different denominators — so a letter like `e` appears with two different numbers across the page. Both are correct for their respective question.
-
 ### Top 50 by letter coverage
 
 Score = sum of baseline rates over the **distinct** letters in the word. Words that pack many high-frequency letters score highest; repeats add nothing.

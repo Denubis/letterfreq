@@ -38,89 +38,28 @@ INDEX_MD = REPO_ROOT / "docs" / "ten" / "index.md"
 
 
 def load_words(path: Path) -> list[str]:
-    """Read one-word-per-line corpus file; drop empty lines; dedupe (preserve order).
-
-    Defensive dedupe via dict.fromkeys protects ranking from showing the same
-    word twice if the corpus file contains duplicates (Phase 5 deferred
-    concern #3; complementary uniqueness assertion lives in Phase 7).
-    """
+    """Read one-word-per-line corpus file; drop empty lines; dedupe (preserve order)."""
     return list(dict.fromkeys(w for w in path.read_text().splitlines() if w))
-
-
-def _count_baseline(baseline: list[str]) -> dict[str, dict[str, int]]:
-    """Compute all six baseline count dicts from the corpus.
-
-    Returned keys: 'letter', 'bigram', 'start_trigram', 'end_trigram',
-    'first_letter', 'last_letter'. Pure; suitable for direct testing.
-    """
-    return {
-        "letter": letter_counts(baseline),
-        "bigram": bigram_counts(baseline),
-        "start_trigram": start_trigram_counts(baseline),  # default min_length=4
-        "end_trigram": end_trigram_counts(baseline),
-        "first_letter": first_letter_counts(baseline),
-        "last_letter": last_letter_counts(baseline),
-    }
-
-
-def _compute_rates(
-    counts: dict[str, dict[str, int]],
-    word_total: int,
-) -> dict[str, dict[str, float]]:
-    """Convert count dicts into rate dicts using the production denominator choices.
-
-    Per-occurrence rate (sum-of-counts denominator) for letter / bigram /
-    start_trigram / end_trigram. Per-word rate (`word_total` denominator) for
-    first_letter / last_letter (per DR8: every baseline word contributes
-    exactly one first and one last letter).
-
-    Each returned rate dict sums to 1.0 by construction. Factoring this out
-    of generate_page lets tests assert the production-path denominator
-    choices rather than re-deriving them in test setup (Phase 5 deferred
-    concern #1; closes the regression-guard gap from Phase 2).
-    """
-    return {
-        "letter": to_rates(counts["letter"], sum(counts["letter"].values())),
-        "bigram": to_rates(counts["bigram"], sum(counts["bigram"].values())),
-        # Trigram totals: only words of length >= 4 contributed (default
-        # min_length=4 per DR3). Sum-of-counts equals the count of length-≥4
-        # words. Critical: using `word_total` here would systematically
-        # deflate trigram rates by the proportion of length-3 words.
-        "start_trigram": to_rates(
-            counts["start_trigram"], sum(counts["start_trigram"].values())
-        ),
-        "end_trigram": to_rates(
-            counts["end_trigram"], sum(counts["end_trigram"].values())
-        ),
-        "first_letter": to_rates(counts["first_letter"], word_total),
-        "last_letter": to_rates(counts["last_letter"], word_total),
-    }
 
 
 def generate_page(words_10: list[str], baseline: list[str]) -> str:
     """Compose the full docs/ten/index.md content."""
-    # --- Counts and rates over baseline -----------------------------------
-    counts = _count_baseline(baseline)
+    letter_c = letter_counts(baseline)
+    bigram_c = bigram_counts(baseline)
+    start_c = start_trigram_counts(baseline)
+    end_c = end_trigram_counts(baseline)
+    first_c = first_letter_counts(baseline)
+    last_c = last_letter_counts(baseline)
+
     word_total = len(baseline)
-    rates = _compute_rates(counts, word_total)
+    trigram_word_total = sum(start_c.values())
 
-    letter_c = counts["letter"]
-    bigram_c = counts["bigram"]
-    start_c = counts["start_trigram"]
-    end_c = counts["end_trigram"]
-    first_c = counts["first_letter"]
-    last_c = counts["last_letter"]
-
-    letter_r = rates["letter"]
-    bigram_r = rates["bigram"]
-    start_r = rates["start_trigram"]
-    end_r = rates["end_trigram"]
-    first_r = rates["first_letter"]
-    last_r = rates["last_letter"]
-
-    # trigram_word_total only used as the `word_count` argument to
-    # render_trigram_pair (drives its "Per word" column).
-    trigram_word_total = sum(start_c.values())  # == sum(end_c.values())
+    letter_r = to_rates(letter_c, sum(letter_c.values()))
+    bigram_r = to_rates(bigram_c, sum(bigram_c.values()))
+    start_r = to_rates(start_c, trigram_word_total)
+    end_r = to_rates(end_c, sum(end_c.values()))
+    first_r = to_rates(first_c, word_total)
+    last_r = to_rates(last_c, word_total)
 
     # --- Reference tables --------------------------------------------------
     # The `word_count` argument to each renderer drives the "Per word" rate
@@ -163,13 +102,6 @@ def generate_page(words_10: list[str], baseline: list[str]) -> str:
         "### First and last letters\n\n"
         f"{ref_first_last}\n\n"
         "## Ten-letter words\n\n"
-        "Note: the reference tables above show **per-word rates** (fraction "
-        "of baseline words containing each item). The scoring formulas below "
-        "use **per-occurrence rates** (fraction of all letter / bigram / "
-        "trigram occurrences across the baseline). Same baseline corpus, "
-        "different denominators — so a letter like `e` appears with two "
-        "different numbers across the page. Both are correct for their "
-        "respective question.\n\n"
         "### Top 50 by letter coverage\n\n"
         "Score = sum of baseline rates over the **distinct** letters in the word. "
         "Words that pack many high-frequency letters score highest; repeats add "
