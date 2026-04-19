@@ -10,8 +10,9 @@ import polars as pl
 
 WORD_FILE = Path(__file__).parent / "data" / "words.txt"
 DOCS_DIR = Path(__file__).parent / "docs"
-DATA_DIR = DOCS_DIR / "data"
-INDEX_MD = DOCS_DIR / "index.md"
+FIVE_DIR = DOCS_DIR / "five"
+DATA_DIR = FIVE_DIR / "data"
+INDEX_MD = FIVE_DIR / "index.md"
 
 
 def load_words(path: Path = WORD_FILE) -> list[str]:
