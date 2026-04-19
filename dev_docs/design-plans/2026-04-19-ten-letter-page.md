@@ -73,15 +73,15 @@ The design is done when:
 - **ten-letter-page.AC8.2 Success:** `data/words_3_to_10.txt` is non-empty; every line matches `^[a-z]{3,10}$`.
 - **ten-letter-page.AC8.3 Success (invariant):** `data/words.txt` (existing 5-letter) is non-empty, line count is at least 15,000, every line matches `^[a-z]{5}$`. This is a structural invariant that catches accidental modification by this refactor while remaining robust to legitimate future regeneration of the file from upstream.
 
+### ten-letter-page.AC9: Documentation freshness
+- **ten-letter-page.AC9.1 Success:** `CLAUDE.md` references `docs/five/`, `docs/ten/`, `letterfreq/` package, `words_10.txt`, `words_3_to_10.txt`.
+- **ten-letter-page.AC9.2 Success:** `CLAUDE.md` freshness date is `2026-04-19` or later.
+
 ### ten-letter-page.AC10: Baseline first-letter and last-letter frequencies are correct
 - **ten-letter-page.AC10.1 Success:** `first_letter_counts(["cation", "static"])` returns `{c:1, s:1}`.
 - **ten-letter-page.AC10.2 Success:** `last_letter_counts(["cation", "static"])` returns `{n:1, c:1}`.
 - **ten-letter-page.AC10.3 Success:** A 3-letter word `"cat"` contributes `{c:1}` to first-letter counts and `{t:1}` to last-letter counts (no minimum-length filter — every word in the baseline contributes).
 - **ten-letter-page.AC10.4 Success:** `first_letter_counts` and `last_letter_counts` on the actual `words_3_to_10.txt` corpus produce non-zero counts for at least the common starting/ending letters (e.g., 's' present in both, 'e' present as last-letter).
-
-### ten-letter-page.AC9: Documentation freshness
-- **ten-letter-page.AC9.1 Success:** `CLAUDE.md` references `docs/five/`, `docs/ten/`, `letterfreq/` package, `words_10.txt`, `words_3_to_10.txt`.
-- **ten-letter-page.AC9.2 Success:** `CLAUDE.md` freshness date is `2026-04-19` or later.
 
 ## Glossary
 
@@ -103,7 +103,7 @@ The current single-page Zensical site is converted into a three-URL site under o
 The ten-letter page is split into two halves:
 
 1. **Reference tables** computed over a baseline corpus of all 3–10 letter words from dwyl/english-words: a 26-row letter frequency table, a top-100 flat bigram frequency table, and two side-by-side top-50 tables for start trigrams and end trigrams.
-2. **Ranking tables** of ten-letter words: three top-50 tables ranked by letter-coverage score, bigram score, and start+end trigram score, using per-occurrence rates from the baseline as weights. Each ranking includes a transparency column showing the underlying components (which distinct letters, which top contributing bigrams, which start/end trigrams).
+2. **Ranking tables** of ten-letter words: four top-50 tables ranked by letter-coverage score, bigram score, start+end trigram score, and positional first+last score (per DR8), using per-occurrence rates from the baseline as weights. Each ranking includes a transparency column showing the underlying components (which distinct letters, which top contributing bigrams, which start/end trigrams, which first/last letters).
 
 Python is reorganised into a small `letterfreq/` package separating pure functional core (`reference.py`, `scoring.py`) from imperative shell (entry scripts `main.py` for five-letter and `main_ten.py` for ten-letter). Both entry scripts read pre-filtered word files, call pure functions for computation, and emit HTML embedded in Markdown — the same pattern the existing `main.py` already uses.
 
@@ -284,7 +284,7 @@ This design introduces one new pattern: a `letterfreq/` Python package separatin
   - `first_letter_counts(words: list[str]) -> dict[str, int]` (per DR8 — count of `word[0]` for each word; no minimum length filter, every baseline word contributes)
   - `last_letter_counts(words: list[str]) -> dict[str, int]` (per DR8 — count of `word[-1]` for each word; no minimum length filter)
   - `to_rates(counts: dict[str, int], total: int) -> dict[str, float]` — helper, count/total
-- `tests/test_reference.py` — hand-checked tiny inputs (e.g., `["cat", "act"]` → letter counts {a:2, c:2, t:2}; bigram counts {ca:1, at:1, ac:1, ct:1}; start trigrams {cat:1, act:1}; end trigrams {cat:1, act:1}; first-letter counts {c:1, a:1}; last-letter counts {t:1, t:1} → {t:2}).
+- `tests/test_reference.py` — hand-checked tiny inputs. For length-3 inputs `["cat", "act"]`: `letter_counts` returns `{a:2, c:2, t:2}`; `bigram_counts` returns `{ca:1, at:1, ac:1, ct:1}`; `start_trigram_counts`/`end_trigram_counts` return `{}` (length-3 words excluded by default `min_length=4` per DR3); `first_letter_counts` returns `{c:1, a:1}`; `last_letter_counts` returns `{t:2}`. For length-4 inputs `["cats", "acts"]`: `start_trigram_counts` returns `{cat:1, act:1}`; `end_trigram_counts` returns `{ats:1, cts:1}`.
 
 **Dependencies:** Phase 1.
 
